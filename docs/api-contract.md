@@ -618,3 +618,20 @@ DashboardUpdated
 PaymentCompleted
 ```
 
+---
+
+## 13. Backend Operations
+
+### GET /health
+
+Kiểm tra trạng thái hoạt động của Restaurant.Api (Backend Core). Endpoint này hoạt động tại root path (không có prefix `/api/v1`) để phục vụ kiểm tra trạng thái local, container health probe (Docker) và CI/CD.
+
+Response:
+
+- **HTTP Status 200 (OK):** Service hoạt động bình thường (Healthy).
+  - Content-Type: `text/plain`
+  - Response Body: `Healthy`
+- **HTTP Status 503 (Service Unavailable):** Gặp sự cố không hoạt động bình thường (Unhealthy).
+  - Content-Type: `text/plain`
+  - Response Body: `Unhealthy`
+

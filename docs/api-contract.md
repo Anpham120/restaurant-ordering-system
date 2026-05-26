@@ -618,3 +618,25 @@ DashboardUpdated
 PaymentCompleted
 ```
 
+---
+
+## 13. Backend Operations
+
+### GET /health
+
+Kiểm tra trạng thái hoạt động của `Restaurant.Api` cho local, Docker và CI/CD.
+Đây là endpoint vận hành công khai và không sử dụng prefix `/api/v1`.
+
+Response khi ứng dụng healthy:
+
+```text
+HTTP 200 OK
+Healthy
+```
+
+Response khi health check không đạt:
+
+```text
+HTTP 503 Service Unavailable
+```
+

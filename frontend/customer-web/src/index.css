@@ -20,6 +20,9 @@
   --text-muted: #6b7280;
   --border-color: rgba(255, 255, 255, 0.07);
   --border-focus: rgba(255, 107, 53, 0.5);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --glass-bg: rgba(24, 26, 32, 0.65);
+  --glass-card-bg: rgba(255, 255, 255, 0.03);
   --success: #10b981;
   --success-glow: rgba(16, 185, 129, 0.2);
   --danger: #f43f5e;
@@ -45,6 +48,24 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.25);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 25px var(--primary-glow);
+}
+
+body.light-theme {
+  --bg-deep: #f4f6fa;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #eaecee;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #8b919e;
+  --border-color: rgba(0, 0, 0, 0.09);
+  --border-focus: rgba(255, 107, 53, 0.7);
+  --border-hover: rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-card-bg: rgba(0, 0, 0, 0.02);
+  --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.75) 100%);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
 }
 
 body {
@@ -88,7 +109,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Glassmorphism helpers */
 .glass-panel {
-  background: rgba(24, 26, 32, 0.65);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
@@ -98,12 +119,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  border-color: var(--border-hover);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-card-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-color);
@@ -114,7 +135,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .glass-card:hover {
   transform: translateY(-4px);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 107, 53, 0.04);
   border-color: var(--primary-glow);
   box-shadow: var(--shadow-md);
 }

@@ -13,7 +13,9 @@ import {
   Users, 
   CheckCircle, 
   RefreshCw, 
-  Sparkles
+  Sparkles,
+  Sun,
+  Moon
 } from 'lucide-react';
 import './App.css';
 
@@ -214,6 +216,17 @@ const CATEGORIES = [
 ];
 
 export function App() {
+  // Theme state & body class manager
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  }, [theme]);
+
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>('home');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -645,12 +658,24 @@ export function App() {
           </div>
         </div>
 
-        {sessionToken && tableSession && (
-          <div className="session-info-bar">
-            <span className="session-indicator"></span>
-            <span>📍 Bàn <strong>{tableSession.tableNumber}</strong></span>
-          </div>
-        )}
+        <div className="header-actions">
+          {sessionToken && tableSession && (
+            <div className="session-info-bar">
+              <span className="session-indicator"></span>
+              <span>📍 Bàn <strong>{tableSession.tableNumber}</strong></span>
+            </div>
+          )}
+
+          <button 
+            type="button"
+            className="theme-toggle-btn" 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title={theme === 'dark' ? 'Chuyển sang Chế độ sáng' : 'Chuyển sang Chế độ tối'}
+            id="theme-toggle"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </header>
 
       {/* -------------------------------------------------------------

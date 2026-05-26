@@ -13,7 +13,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), appBuilder =>
+{
+    appBuilder.UseHttpsRedirection();
+});
 
 app.MapHealthChecks("/health");
 

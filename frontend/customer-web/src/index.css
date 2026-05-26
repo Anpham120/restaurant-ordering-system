@@ -277,7 +277,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .form-control:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+  box-shadow: none !important;
+  outline: none !important;
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -580,8 +581,8 @@ input:checked + .slider-switch:before {
 
 .header-search-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 10px var(--primary-glow);
-  outline: none;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .header-shortcut {

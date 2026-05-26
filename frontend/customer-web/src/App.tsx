@@ -15,7 +15,15 @@ import {
   RefreshCw, 
   Sparkles,
   Sun,
-  Moon
+  Moon,
+  Home,
+  Bot,
+  Heart,
+  Star,
+  Tag,
+  Newspaper,
+  Bell,
+  ScanLine
 } from 'lucide-react';
 import './App.css';
 
@@ -127,7 +135,7 @@ const MOCK_MENU: MenuItem[] = [
     price: 99000,
     categoryId: "cat-appetizer",
     categoryName: "Khai Vị",
-    tags: ["mặn ngọt", "được thích"],
+    tags: ["mặn ngọt", "được thích", "bán chạy"],
     isAvailable: true,
     imageUrl: "",
     emoji: "🍗"
@@ -139,7 +147,7 @@ const MOCK_MENU: MenuItem[] = [
     price: 189000,
     categoryId: "cat-main",
     categoryName: "Món Chính",
-    tags: ["bò", "trẻ em yêu thích"],
+    tags: ["bò", "trẻ em yêu thích", "nổi bật"],
     isAvailable: true,
     imageUrl: "",
     emoji: "🥩"
@@ -175,7 +183,7 @@ const MOCK_MENU: MenuItem[] = [
     price: 45000,
     categoryId: "cat-drink",
     categoryName: "Đồ Uống",
-    tags: ["bán chạy", "thanh mát"],
+    tags: ["bán chạy", "thanh mát", "được thích"],
     isAvailable: true,
     imageUrl: "",
     emoji: "🍑"
@@ -199,20 +207,20 @@ const MOCK_MENU: MenuItem[] = [
     price: 49000,
     categoryId: "cat-dessert",
     categoryName: "Tráng Miệng",
-    tags: ["ngọt ngào"],
-    isAvailable: false, // Out of stock to test unavailable items UI
+    tags: ["ngọt ngào", "nổi bật"],
+    isAvailable: false, // Out of stock
     imageUrl: "",
     emoji: "🍰"
   }
 ];
 
 const CATEGORIES = [
-  { id: "all", name: "Tất Cả Món" },
-  { id: "cat-appetizer", name: "Món Khai Vị" },
-  { id: "cat-main", name: "Món Chính" },
-  { id: "cat-hotpot", name: "Món Lẩu" },
-  { id: "cat-drink", name: "Đồ Uống" },
-  { id: "cat-dessert", name: "Tráng Miệng" }
+  { id: "all", name: "Tất Cả Món", emoji: "🍱" },
+  { id: "cat-appetizer", name: "Món Khai Vị", emoji: "🥗" },
+  { id: "cat-main", name: "Món Chính", emoji: "🥩" },
+  { id: "cat-hotpot", name: "Món Lẩu", emoji: "🍲" },
+  { id: "cat-drink", name: "Đồ Uống", emoji: "🍹" },
+  { id: "cat-dessert", name: "Tráng Miệng", emoji: "🍰" }
 ];
 
 export function App() {
@@ -272,6 +280,14 @@ export function App() {
   const [aiInputValue, setAiInputValue] = useState("");
   const [isAiTyping, setIsAiTyping] = useState(false);
 
+  // Custom UI alert systems for proto actions
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   // -------------------------------------------------------------
   // EFFECT - PARSE URL SEARCH PARAMS ON LOAD (GET /qr-order/{token})
   // -------------------------------------------------------------
@@ -291,7 +307,6 @@ export function App() {
   useEffect(() => {
     if (placedOrders.length === 0) return;
 
-    // Simulate SignalR server pushing status updates for the orders in preparation
     const interval = setInterval(() => {
       setPlacedOrders(prevOrders => {
         let updated = false;
@@ -313,6 +328,7 @@ export function App() {
             nextStatus = 'Served';
             nextItems = order.items.map(it => ({ ...it, status: 'Served' }));
             updated = true;
+            triggerToast(`Món ngon của bạn đã sẵn sàng! Nhân viên đang phục vụ lên Bàn ${order.tableNumber}.`);
           }
 
           return {
@@ -327,7 +343,7 @@ export function App() {
         }
         return prevOrders;
       });
-    }, 12000); // Trigger a transition state every 12 seconds
+    }, 12000);
 
     return () => clearInterval(interval);
   }, [placedOrders]);
@@ -336,7 +352,6 @@ export function App() {
   // ACTIONS: LOADING TABLE SESSION
   // -------------------------------------------------------------
   const handleLoadTableSession = (token: string) => {
-    // Aligns with: GET /api/v1/table-sessions/by-token/{token}
     setSessionToken(token);
     const mockSession: TableSession = {
       id: "sess_" + Math.random().toString(36).substr(2, 9),
@@ -346,15 +361,14 @@ export function App() {
       openedAt: new Date().toISOString()
     };
     setTableSession(mockSession);
-    setActiveTab('menu'); // Navigate directly to QR ordering menu
+    setActiveTab('menu');
+    triggerToast("📍 Đã kích hoạt session gọi món tại Bàn A01!");
 
-    // Trigger URL clean display or set in state
     const cleanUrl = window.location.pathname + `?sessionToken=${token}`;
     window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
   };
 
   const handleSimulateQRScan = () => {
-    // Create random mock token
     const randomToken = "secure-qr-session-token-" + Math.floor(1000 + Math.random() * 9000);
     handleLoadTableSession(randomToken);
   };
@@ -364,6 +378,7 @@ export function App() {
     setTableSession(null);
     setCart([]);
     window.history.replaceState({}, '', window.location.pathname);
+    triggerToast("Đã đóng phiên gọi món tại bàn.");
   };
 
   // -------------------------------------------------------------
@@ -399,6 +414,7 @@ export function App() {
       }
     });
 
+    triggerToast(`Đã thêm ${dishQuantity} suất ${selectedDish.name} vào giỏ!`);
     setSelectedDish(null);
   };
 
@@ -416,6 +432,7 @@ export function App() {
 
   const handleRemoveFromCart = (menuItemId: string, note: string) => {
     setCart(prevCart => prevCart.filter(item => !(item.menuItemId === menuItemId && item.note === note)));
+    triggerToast("Đã xóa món ăn khỏi giỏ hàng.");
   };
 
   const getCartTotal = () => {
@@ -433,7 +450,6 @@ export function App() {
     if (cart.length === 0) return;
     setIsSubmittingOrder(true);
 
-    // Simulate API delay, enforcing idempotencyKey check
     setTimeout(() => {
       const orderCode = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
       const newItems: OrderItem[] = cart.map((item, idx) => ({
@@ -458,7 +474,8 @@ export function App() {
       setCart([]);
       setIsCartOpen(false);
       setIsSubmittingOrder(false);
-      setActiveTab('tracker'); // Jump to live tracker immediately to wow customer
+      setActiveTab('tracker');
+      triggerToast("🚀 Gửi order thành công! Đang chờ bếp phản hồi...");
     }, 1500);
   };
 
@@ -470,7 +487,6 @@ export function App() {
     if (!customerName || !phone || !reservationTime) return;
     setIsSubmittingReservation(true);
 
-    // Simulate API delay
     setTimeout(() => {
       const rCode = `RSV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
       const newRes: Reservation = {
@@ -488,11 +504,11 @@ export function App() {
       setLatestReservation(newRes);
       setIsSubmittingReservation(false);
 
-      // Clear Form
       setCustomerName("");
       setPhone("");
       setReservationTime("");
       setReservationNote("");
+      triggerToast("📅 Đặt bàn thành công! Đã tạo phiếu xác nhận.");
     }, 1200);
   };
 
@@ -503,7 +519,6 @@ export function App() {
     const query = forcedQuery || aiInputValue;
     if (!query.trim()) return;
 
-    // Add user message
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: "user",
@@ -514,7 +529,6 @@ export function App() {
     if (!forcedQuery) setAiInputValue("");
     setIsAiTyping(true);
 
-    // Simulate AI Service RAG Processing delay
     setTimeout(() => {
       let aiResponseText = "";
       let sources: string[] = ["menu.md"];
@@ -603,7 +617,26 @@ export function App() {
       return updatedCart;
     });
 
-    setIsCartOpen(true); // Open the cart to show the added items!
+    setIsCartOpen(true);
+    triggerToast("Đã nhập combo khuyến nghị của AI vào giỏ hàng!");
+  };
+
+  // -------------------------------------------------------------
+  // PROMO CARD CLICKS -> ACTIVE FILTERS
+  // -------------------------------------------------------------
+  const handlePromoClick = (type: 'cay' | 'khai-vi' | 'ban-chay') => {
+    if (type === 'cay') {
+      setSearchKeyword("cay");
+      setSelectedCategory("all");
+    } else if (type === 'khai-vi') {
+      setSearchKeyword("");
+      setSelectedCategory("cat-appetizer");
+    } else if (type === 'ban-chay') {
+      setSearchKeyword("bán chạy");
+      setSelectedCategory("all");
+    }
+    setActiveTab('menu');
+    triggerToast(`Đã lọc danh sách món theo bộ sưu tập!`);
   };
 
   // -------------------------------------------------------------
@@ -618,661 +651,824 @@ export function App() {
   });
 
   return (
-    <div className="app-container">
+    <div className="app-layout">
       {/* -------------------------------------------------------------
-          SIMULATION BAR: Top banner to showcase full QR Order flow simulator
+          TOAST ALERT BANNER (High-fidelity overlay)
           ------------------------------------------------------------- */}
-      <div className="simulation-panel">
-        <div className="simulation-info">
-          <div className="simulation-icon">📱</div>
-          <div>
-            <div className="simulation-title">Trình Giả Lập Quét Mã QR Gọi Món (Customer Web)</div>
-            <div className="simulation-desc">
-              {sessionToken 
-                ? `Đang mô phỏng quét mã tại BÀN ${tableSession?.tableNumber}. Token: ${sessionToken.substring(0, 15)}...`
-                : "Quét QR để nhận số bàn, gọi món gửi trực tiếp vào bếp bếp, theo dõi SignalR."
-              }
-            </div>
-          </div>
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          background: 'rgba(255, 107, 53, 0.95)',
+          color: '#07080a',
+          padding: '14px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(255, 107, 53, 0.3)',
+          fontWeight: 700,
+          zIndex: 99999,
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backdropFilter: 'blur(8px)',
+          animation: 'fadeIn 0.3s forwards'
+        }}>
+          <span>🔔</span> {toastMessage}
         </div>
-        {sessionToken ? (
-          <button className="simulation-btn" onClick={handleClearSession} id="btn-reset-session">
-            Hủy Bàn & Thoát
-          </button>
-        ) : (
-          <button className="simulation-btn" onClick={handleSimulateQRScan} id="btn-simulate-qr">
-            Quét Mã QR Bàn A01
-          </button>
-        )}
-      </div>
+      )}
 
       {/* -------------------------------------------------------------
-          HEADER SECTION
+          LEFT SIDEBAR (DESKTOP LAYOUT - screens >= 1024px)
           ------------------------------------------------------------- */}
-      <header className="app-header">
-        <div className="logo-container" onClick={() => setActiveTab('home')} style={{ cursor: 'pointer' }}>
-          <div className="logo-icon">A</div>
-          <div>
-            <h1 className="logo-text grad-text">Antigravity</h1>
-            <p style={{ fontSize: '0.68rem', letterSpacing: '2px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '-4px' }}>Bistro</p>
+      <aside className="app-sidebar">
+        <div>
+          {/* Logo Header */}
+          <div className="sidebar-logo">
+            <div className="logo-icon">A</div>
+            <div>
+              <h1 className="logo-text grad-text" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.5px' }}>ANTIGRAVITY</h1>
+              <p style={{ fontSize: '0.6rem', letterSpacing: '3px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '-4px', fontWeight: 700 }}>Bistro</p>
+            </div>
           </div>
+
+          {/* Menu Links */}
+          <nav className="sidebar-menu">
+            <button className={`sidebar-menu-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')} id="side-nav-home">
+              <Home size={18} /> <span>Trang Chủ</span>
+            </button>
+            <button className={`sidebar-menu-btn ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => { setActiveTab('menu'); setSearchKeyword(""); setSelectedCategory("all"); }} id="side-nav-menu">
+              <Utensils size={18} /> <span>Thực Đơn</span>
+            </button>
+            <button className={`sidebar-menu-btn ${activeTab === 'reservation' ? 'active' : ''}`} onClick={() => setActiveTab('reservation')} id="side-nav-book">
+              <Calendar size={18} /> <span>Đặt Bàn</span>
+            </button>
+            <button className={`sidebar-menu-btn ${activeTab === 'tracker' ? 'active' : ''}`} onClick={() => setActiveTab('tracker')} id="side-nav-tracker">
+              <Clock size={18} /> <span>Đơn Hàng</span>
+            </button>
+            <button className={`sidebar-menu-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')} id="side-nav-ai">
+              <Bot size={18} /> <span>Trợ Lý AI</span>
+            </button>
+
+            {/* Simulated Extended Links from Mockup */}
+            <div style={{ height: '1px', background: 'var(--border-color)', margin: '12px 0' }}></div>
+            <button className="sidebar-menu-btn" onClick={() => handlePromoClick('ban-chay')}>
+              <Heart size={18} /> <span>Yêu Thích</span>
+            </button>
+            <button className="sidebar-menu-btn" onClick={() => triggerToast("Tính năng Đánh Giá đang phát triển!")}>
+              <Star size={18} /> <span>Đánh Giá</span>
+            </button>
+            <button className="sidebar-menu-btn" onClick={() => triggerToast("Mã giảm giá hôm nay: ANTIGRAVITY50 - Giảm 50k!")}>
+              <Tag size={18} /> <span>Khuyến Mãi</span>
+            </button>
+            <button className="sidebar-menu-btn" onClick={() => triggerToast("Antigravity Bistro vừa lọt Top 10 nhà hàng Bistro công nghệ tốt nhất 2026!")}>
+              <Newspaper size={18} /> <span>Tin Tức</span>
+            </button>
+          </nav>
         </div>
 
-        <div className="header-actions">
-          {sessionToken && tableSession && (
-            <div className="session-info-bar">
-              <span className="session-indicator"></span>
-              <span>📍 Bàn <strong>{tableSession.tableNumber}</strong></span>
+        {/* Footer info containing user and switch */}
+        <div className="sidebar-footer">
+          {/* User profile */}
+          <div className="sidebar-profile" onClick={() => triggerToast("Khách hàng Hoàng Minh - Hạng Vàng")}>
+            <div className="sidebar-avatar">👨‍🚀</div>
+            <div className="sidebar-profile-info">
+              <div className="sidebar-profile-name">Hoàng Minh</div>
+              <div className="sidebar-profile-points">120 điểm</div>
             </div>
-          )}
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>➔</div>
+          </div>
+
+          {/* Theme switcher toggle switch */}
+          <div className="sidebar-theme-row">
+            <span className="sidebar-theme-label">Chế độ tối</span>
+            <label className="theme-switch">
+              <input 
+                type="checkbox" 
+                checked={theme === 'dark'} 
+                onChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              />
+              <span className="slider-switch"></span>
+            </label>
+          </div>
+        </div>
+      </aside>
+
+      {/* -------------------------------------------------------------
+          MAIN SCROLLABLE CONTENT CONTAINER
+          ------------------------------------------------------------- */}
+      <div className="app-main-content">
+        
+        {/* DESKTOP HEADER (Screens >= 1024px) */}
+        <header className="desktop-header">
+          {/* Search bar input with shortcut */}
+          <div className="header-search-container">
+            <Search size={18} className="header-search-icon" />
+            <input 
+              type="text" 
+              placeholder="Tìm món ăn, hương vị, nguyên liệu..." 
+              className="header-search-input"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onClick={() => setActiveTab('menu')}
+            />
+            <span className="header-shortcut">⌘ K</span>
+          </div>
+
+          {/* Notification bell, wishlist, and QR button */}
+          <div className="header-right-actions">
+            <button className="header-icon-btn" onClick={() => triggerToast("Bạn có 2 thông báo mới về đơn hàng!")}>
+              <Bell size={18} />
+              <span className="badge-count">2</span>
+            </button>
+            <button className="header-icon-btn" onClick={() => handlePromoClick('ban-chay')}>
+              <Heart size={18} />
+            </button>
+            
+            {sessionToken ? (
+              <button className="header-qr-btn" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--danger)', boxShadow: 'none' }} onClick={handleClearSession}>
+                <ScanLine size={16} /> Thoát Bàn {tableSession?.tableNumber}
+              </button>
+            ) : (
+              <button className="header-qr-btn" onClick={handleSimulateQRScan}>
+                <ScanLine size={16} /> Quét mã QR bàn A01
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* MOBILE TOP BAR (Screens < 1024px) */}
+        <div className="mobile-top-bar">
+          <div className="sidebar-logo" style={{ marginBottom: 0 }}>
+            <div className="logo-icon" style={{ width: '32px', height: '32px', fontSize: '1.1rem' }}>A</div>
+            <div>
+              <h1 className="logo-text grad-text" style={{ fontSize: '1.05rem', fontWeight: 800 }}>ANTIGRAVITY</h1>
+              <p style={{ fontSize: '0.5rem', letterSpacing: '2px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '-4px' }}>Bistro</p>
+            </div>
+          </div>
 
           <button 
             type="button"
             className="theme-toggle-btn" 
+            style={{ width: '34px', height: '34px' }}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={theme === 'dark' ? 'Chuyển sang Chế độ sáng' : 'Chuyển sang Chế độ tối'}
-            id="theme-toggle"
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
-      </header>
 
-      {/* -------------------------------------------------------------
-          MAIN APPLICATION DISPLAY
-          ------------------------------------------------------------- */}
-      <main className="main-content">
-        
-        {/* TAB 1: HOME VIEW */}
-        {activeTab === 'home' && (
-          <div className="animate-fade-in">
-            <div className="hero-section">
-              <div className="hero-content">
-                <span className="hero-subtitle">Tinh Hoa Ẩm Thực Việt & Quốc Tế</span>
-                <h1 className="hero-title">Trải Nghiệm Gọi Món Khác Biệt Bằng <span className="grad-text">Công Nghệ</span></h1>
-                <p className="hero-desc">Đặt bàn trực tuyến trong 30 giây, quét QR gọi món tại bàn không lo xếp hàng và trò chuyện cùng Trợ lý AI đặc sản siêu thông minh.</p>
-                <div className="hero-actions">
-                  <button className="btn btn-primary" onClick={() => setActiveTab('menu')} id="btn-home-menu">
-                    <Utensils size={18} /> Xem Thực Đơn
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => setActiveTab('reservation')} id="btn-home-book">
-                    <Calendar size={18} /> Đặt Bàn Ngay
-                  </button>
-                </div>
-              </div>
-              <div className="hero-image-container">
-                <div className="hero-circle-backdrop">
-                  <span className="hero-artwork animate-float">🍲</span>
-                </div>
-              </div>
+        {/* MOBILE QR SCAN STRIP (Mockup topmost element) */}
+        {!sessionToken && (
+          <div className="mobile-qr-strip glass-panel" style={{ display: window.innerWidth < 1024 ? 'flex' : 'none', marginBottom: '16px', border: '1px solid rgba(255, 107, 53, 0.2)' }} onClick={handleSimulateQRScan}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: 'var(--primary)' }}><ScanLine size={16} /></span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Quét QR để nhận menu trực tiếp tại bàn</span>
             </div>
-
-            <div style={{ textAlign: 'left', marginBottom: '32px' }}>
-              <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>Chức Năng Tiện Ích Cho Khách</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>Mọi dịch vụ số hóa tốt nhất phục vụ quý khách tại nhà hàng.</p>
-            </div>
-
-            <div className="dishes-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-              <div className="glass-panel" style={{ padding: '24px', textAlign: 'left', cursor: 'pointer' }} onClick={() => setActiveTab('menu')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🍲</div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Thực Đơn Số Hóa</h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Xem danh sách món, lọc nhanh, tìm kiếm, giá cả minh bạch rõ ràng kèm hình ảnh trực quan.</p>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '24px', textAlign: 'left', cursor: 'pointer' }} onClick={() => setActiveTab('reservation')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>📅</div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Đặt Bàn Trực Tuyến</h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Đảm bảo giữ bàn đẹp gần cửa sổ, phục vụ đúng giờ nhanh chóng kèm dịch vụ đón khách chu đáo.</p>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '24px', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSimulateQRScan()}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>📱</div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>QR Code Gọi Món</h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Đọc mã bàn, chọn món, ghi chú cay ngọt thoải mái và gửi thẳng đơn xuống bếp nấu lập tức.</p>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '24px', textAlign: 'left', cursor: 'pointer' }} onClick={() => setActiveTab('ai')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🤖</div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Trợ Lý Khẩu Vị AI</h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>Tự động tư vấn món ngon theo số người, ngân sách nhóm và hỏi đáp các chính sách ẩm thực tại chỗ.</p>
-              </div>
-            </div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>➔</span>
           </div>
         )}
 
-        {/* TAB 2: MENU & QR ORDER VIEW */}
-        {activeTab === 'menu' && (
-          <div className="animate-fade-in menu-container">
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
-                <Utensils size={14} /> Thực Đơn Trực Tuyến
-              </div>
-              <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Thưởng Thức Hương Vị Độc Đáo</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>
-                {sessionToken 
-                  ? `Quý khách đang ở BÀN ${tableSession?.tableNumber}. Thêm món vào giỏ và đặt hàng ngay!` 
-                  : "Khám phá danh sách các món ăn tinh tế của Antigravity Bistro."
-                }
-              </p>
-            </div>
-
-            {/* Search and Filters */}
-            <div className="menu-search-bar">
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Tìm tên món ăn, hương vị, nguyên liệu..." 
-                  className="form-control"
-                  style={{ paddingLeft: '48px' }}
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  id="menu-search"
-                />
+        {/* QR Session simulation panel strip (for demo feedback) */}
+        {sessionToken && (
+          <div className="simulation-panel" style={{ marginBottom: '24px' }}>
+            <div className="simulation-info">
+              <div className="simulation-icon">📱</div>
+              <div>
+                <div className="simulation-title">Đang quét bàn {tableSession?.tableNumber}</div>
+                <div className="simulation-desc">Session token: {sessionToken.substring(0, 20)}...</div>
               </div>
             </div>
+            <button className="simulation-btn" onClick={handleClearSession}>Hủy Bàn</button>
+          </div>
+        )}
 
-            {/* Category tabs */}
-            <div className="category-tabs-container">
-              {CATEGORIES.map(cat => (
+        {/* MAIN DISPLAY AREA */}
+        <main className="main-content" style={{ padding: 0 }}>
+          
+          {/* TAB 1: HOME VIEW */}
+          {activeTab === 'home' && (
+            <div className="animate-fade-in">
+              {/* Redesigned Hero Banner matching mockup */}
+              <div className="hero-section" style={{ background: theme === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(16, 18, 22, 0.45)' }}>
+                <div className="hero-content">
+                  <span className="hero-subtitle">THỰC ĐƠN TRỰC TUYẾN</span>
+                  <h1 className="hero-title" style={{ fontSize: window.innerWidth < 640 ? '2.2rem' : '3.3rem', color: 'var(--text-primary)' }}>
+                    Thưởng Thức <br />Hương Vị <span className="grad-text" style={{ borderBottom: '3px solid var(--primary)', paddingBottom: '2px' }}>Độc Đáo</span>
+                  </h1>
+                  <p className="hero-desc" style={{ marginTop: '16px' }}>Khám phá danh sách các món ăn tinh tế của Antigravity Bistro.</p>
+                  
+                  <div className="hero-actions" style={{ marginTop: '20px' }}>
+                    <button className="btn btn-primary" onClick={() => setActiveTab('menu')} id="btn-home-menu">
+                      <Utensils size={18} /> Xem Thực Đơn
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => setActiveTab('reservation')} id="btn-home-book">
+                      <Calendar size={18} /> Đặt Bàn Ngay
+                    </button>
+                  </div>
+                </div>
+                <div className="hero-image-container">
+                  <div className="hero-circle-backdrop" style={{ width: '320px', height: '320px' }}>
+                    {/* Simulated rotating dish visual from mockup */}
+                    <span className="hero-artwork animate-float" style={{ fontSize: '9.5rem' }}>🍲</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* THREE PROMO FEATURE CARDS (Redesigned matching mockup) */}
+              <div className="feature-promos-container">
+                <div className="feature-promos-row">
+                  {/* Card 1 */}
+                  <div className="feature-promo-card promo-cay" onClick={() => handlePromoClick('cay')}>
+                    <div className="feature-promo-info">
+                      <h3 className="feature-promo-title">Món Cay 🌶️</h3>
+                      <p className="feature-promo-desc">Hương vị đậm đà, kích thích vị giác</p>
+                      <button className="feature-promo-btn">Khám phá ➔</button>
+                    </div>
+                    <div className="feature-promo-visual">🍜</div>
+                  </div>
+
+                  {/* Card 2 */}
+                  <div className="feature-promo-card promo-khai-vi" onClick={() => handlePromoClick('khai-vi')}>
+                    <div className="feature-promo-info">
+                      <h3 className="feature-promo-title">Khai Vị Tươi Ngon 🥬</h3>
+                      <p className="feature-promo-desc">Món mở đầu hoàn hảo cho bữa ăn</p>
+                      <button className="feature-promo-btn">Khám phá ➔</button>
+                    </div>
+                    <div className="feature-promo-visual">🥗</div>
+                  </div>
+
+                  {/* Card 3 */}
+                  <div className="feature-promo-card promo-yeu-thich" onClick={() => handlePromoClick('ban-chay')}>
+                    <div className="feature-promo-info">
+                      <h3 className="feature-promo-title">Món Được Thích ❤️</h3>
+                      <p className="feature-promo-desc">Thực khách đánh giá và bình chọn cao</p>
+                      <button className="feature-promo-btn">Xem ngay ➔</button>
+                    </div>
+                    <div className="feature-promo-visual">🍹</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* MÓN NỔI BẬT LISTING (Grid of highlighted items) */}
+              <div style={{ textAlign: 'left', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Món Nổi Bật <span style={{ color: 'var(--primary)' }}>🔥</span>
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '2px' }}>Những món ăn được yêu thích nhất tại Antigravity Bistro.</p>
+                </div>
                 <button 
-                  key={cat.id} 
-                  className={`category-tab ${selectedCategory === cat.id ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  id={`cat-btn-${cat.id}`}
+                  className="btn btn-secondary" 
+                  style={{ padding: '8px 16px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '20px' }}
+                  onClick={() => { setActiveTab('menu'); setSearchKeyword(""); setSelectedCategory("all"); }}
                 >
-                  {cat.name}
+                  Xem tất cả ➔
                 </button>
-              ))}
-            </div>
-
-            {/* Dishes grid */}
-            {filteredMenu.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🍽️</div>
-                <h3>Không tìm thấy món ăn nào phù hợp</h3>
-                <p style={{ fontSize: '0.9rem', marginTop: '4px' }}>Quý khách vui lòng thử tìm kiếm với từ khóa khác.</p>
               </div>
-            ) : (
-              <div className="dishes-grid">
-                {filteredMenu.map(dish => (
+
+              <div className="dishes-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+                {MOCK_MENU.filter(d => d.tags.includes('nổi bật') || d.tags.includes('bán chạy')).slice(0, 5).map(dish => (
                   <div 
                     key={dish.id} 
-                    className={`glass-panel dish-card ${!dish.isAvailable ? 'out-of-stock' : ''}`}
+                    className="glass-panel dish-card"
                     onClick={() => handleOpenDishModal(dish)}
-                    id={`dish-card-${dish.id}`}
+                    style={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer' }}
                   >
-                    <div className="dish-image-wrapper">
-                      <div className="dish-image-placeholder">{dish.emoji}</div>
+                    <div className="dish-image-wrapper" style={{ height: '160px' }}>
+                      <div className="dish-image-placeholder" style={{ fontSize: '4.5rem' }}>{dish.emoji}</div>
                       <div className="dish-badge-container">
-                        {dish.tags.map((tag, idx) => (
-                          <span key={idx} className="badge badge-primary">{tag}</span>
-                        ))}
-                        {!dish.isAvailable && (
-                          <span className="badge badge-danger">Hết Món</span>
-                        )}
+                        <span className="badge badge-primary" style={{ background: dish.tags.includes('cay') ? 'var(--danger)' : 'var(--primary)' }}>
+                          {dish.tags.includes('cay') ? 'Cay 🌶️' : (dish.tags.includes('bán chạy') ? 'Bán Chạy' : 'Nổi Bật')}
+                        </span>
                       </div>
                     </div>
-                    <div className="dish-details">
-                      <div className="dish-category">{dish.categoryName}</div>
-                      <h3 className="dish-title">{dish.name}</h3>
-                      <p className="dish-desc">{dish.description}</p>
-                      <div className="dish-footer">
-                        <span className="dish-price">{dish.price.toLocaleString('vi-VN')} ₫</span>
-                        {dish.isAvailable && (
-                          <div className="dish-btn-add">
-                            <Plus size={18} />
-                          </div>
-                        )}
+                    <div className="dish-details" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div className="dish-category" style={{ fontSize: '0.75rem' }}>{dish.categoryName}</div>
+                        <h3 className="dish-title" style={{ fontSize: '1.05rem', margin: '4px 0' }}>{dish.name}</h3>
+                        <p className="dish-desc" style={{ fontSize: '0.78rem', lineClamp: 2, WebkitLineClamp: 2 }}>{dish.description}</p>
+                      </div>
+                      <div className="dish-footer" style={{ marginTop: '12px' }}>
+                        <span className="dish-price" style={{ fontSize: '1.1rem', fontWeight: 800 }}>{dish.price.toLocaleString('vi-VN')} đ</span>
+                        <div className="dish-btn-add" style={{ width: '32px', height: '32px' }} onClick={(e) => { e.stopPropagation(); handleOpenDishModal(dish); }}>
+                          <Plus size={16} />
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: RESERVATION VIEW */}
-        {activeTab === 'reservation' && (
-          <div className="animate-fade-in reservation-container">
-            <div className="reservation-header">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
-                <Calendar size={14} /> Dịch Vụ Khách Hàng
-              </div>
-              <h2 className="reservation-title">Đặt Bàn Trực Tuyến</h2>
-              <p className="reservation-subtitle">Đặt bàn trước để giữ chỗ đẹp nhất và nhận phục vụ chu đáo nhất.</p>
             </div>
+          )}
 
-            {latestReservation ? (
-              // Display beautiful animated Booking Receipt
-              <div className="glass-panel booking-receipt animate-fade-in">
-                <div className="receipt-header">
-                  <div className="receipt-success-icon">
-                    <CheckCircle size={44} style={{ display: 'inline' }} />
-                  </div>
-                  <h3 className="receipt-title">Đặt Bàn Thành Công</h3>
-                  <div className="receipt-code-label">Mã Số Đặt Bàn</div>
-                  <div className="receipt-code">{latestReservation.reservationCode}</div>
+          {/* TAB 2: MENU & QR ORDER VIEW */}
+          {activeTab === 'menu' && (
+            <div className="animate-fade-in menu-container">
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  <Utensils size={14} /> Thực Đơn Trực Tuyến
                 </div>
-
-                <div className="receipt-details-list">
-                  <div className="receipt-row">
-                    <span className="receipt-label">Quý Khách:</span>
-                    <span className="receipt-value">{latestReservation.customerName}</span>
-                  </div>
-                  <div className="receipt-row">
-                    <span className="receipt-label">Số Điện Thoại:</span>
-                    <span className="receipt-value">{latestReservation.phone}</span>
-                  </div>
-                  <div className="receipt-row">
-                    <span className="receipt-label">Số Khách Đi:</span>
-                    <span className="receipt-value">{latestReservation.guestCount} Khách</span>
-                  </div>
-                  <div className="receipt-row">
-                    <span className="receipt-label">Thời Gian Đặt:</span>
-                    <span className="receipt-value">{new Date(latestReservation.reservationTime).toLocaleString('vi-VN')}</span>
-                  </div>
-                  {latestReservation.note && (
-                    <div className="receipt-row">
-                      <span className="receipt-label">Ghi Chú:</span>
-                      <span className="receipt-value">{latestReservation.note}</span>
-                    </div>
-                  )}
-                  <div className="receipt-row">
-                    <span className="receipt-label">Trạng Thái:</span>
-                    <span className="receipt-value">
-                      <span className="badge badge-warning">Chờ Check-in</span>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="receipt-qr-area">
-                  <div className="receipt-qr-box">
-                    <div className="receipt-qr-mock">📱</div>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    Quét hoặc Đưa mã QR check-in này cho nhân viên lễ tân khi đến nhà hàng.
-                  </p>
-                </div>
-
-                <div className="receipt-instructions">
-                  💡 <strong>Hướng dẫn đến nhà hàng:</strong> Quý khách vui lòng đến trước giờ hẹn 10-15 phút. Đặt bàn sẽ tự động lưu giữ tối đa 30 phút sau giờ đặt hẹn.
-                </div>
-
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ width: '100%', marginTop: '24px' }}
-                  onClick={() => setLatestReservation(null)}
-                  id="btn-book-another"
-                >
-                  Đặt Thêm Bàn Khác
-                </button>
+                <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Thưởng Thức Hương Vị Độc Đáo</h2>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  {sessionToken 
+                    ? `Quý khách đang ở BÀN ${tableSession?.tableNumber}. Thêm món vào giỏ và đặt hàng ngay!` 
+                    : "Khám phá danh sách các món ăn tinh tế của Antigravity Bistro."
+                  }
+                </p>
               </div>
-            ) : (
-              // Form for reservation submission
-              <form onSubmit={handleSubmitReservation} className="glass-panel" style={{ padding: '32px', textAlign: 'left' }}>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="res-name">Họ và Tên Khách Hàng *</label>
-                  <div style={{ position: 'relative' }}>
-                    <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input 
-                      type="text" 
-                      id="res-name" 
-                      className="form-control" 
-                      style={{ paddingLeft: '44px' }}
-                      placeholder="Nguyễn Văn A" 
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                    />
-                  </div>
-                </div>
 
-                <div className="form-grid-row">
+              {/* Mobile Only search bar (Screens < 1024px) */}
+              <div className="menu-search-bar" style={{ display: window.innerWidth < 1024 ? 'block' : 'none' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm tên món ăn, hương vị, nguyên liệu..." 
+                    className="form-control"
+                    style={{ paddingLeft: '48px' }}
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    id="menu-search"
+                  />
+                </div>
+              </div>
+
+              {/* Category tabs */}
+              <div className="category-tabs-container">
+                {CATEGORIES.map(cat => (
+                  <button 
+                    key={cat.id} 
+                    className={`category-tab ${selectedCategory === cat.id ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    id={`cat-btn-${cat.id}`}
+                  >
+                    <span style={{ marginRight: '6px' }}>{cat.emoji}</span> {cat.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Dishes grid */}
+              {filteredMenu.length === 0 ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🍽️</div>
+                  <h3>Không tìm thấy món ăn nào phù hợp</h3>
+                  <p style={{ fontSize: '0.9rem', marginTop: '4px' }}>Quý khách vui lòng thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.</p>
+                  <button className="btn btn-secondary" style={{ marginTop: '16px' }} onClick={() => { setSearchKeyword(""); setSelectedCategory("all"); }}>
+                    Xóa Bộ Lọc
+                  </button>
+                </div>
+              ) : (
+                <div className="dishes-grid">
+                  {filteredMenu.map(dish => (
+                    <div 
+                      key={dish.id} 
+                      className={`glass-panel dish-card ${!dish.isAvailable ? 'out-of-stock' : ''}`}
+                      onClick={() => handleOpenDishModal(dish)}
+                      id={`dish-card-${dish.id}`}
+                    >
+                      <div className="dish-image-wrapper">
+                        <div className="dish-image-placeholder">{dish.emoji}</div>
+                        <div className="dish-badge-container">
+                          {dish.tags.map((tag, idx) => (
+                            <span key={idx} className="badge badge-primary">{tag}</span>
+                          ))}
+                          {!dish.isAvailable && (
+                            <span className="badge badge-danger">Hết Món</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="dish-details">
+                        <div className="dish-category">{dish.categoryName}</div>
+                        <h3 className="dish-title">{dish.name}</h3>
+                        <p className="dish-desc">{dish.description}</p>
+                        <div className="dish-footer">
+                          <span className="dish-price">{dish.price.toLocaleString('vi-VN')} ₫</span>
+                          {dish.isAvailable && (
+                            <div className="dish-btn-add">
+                              <Plus size={18} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: RESERVATION VIEW */}
+          {activeTab === 'reservation' && (
+            <div className="animate-fade-in reservation-container">
+              <div className="reservation-header">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  <Calendar size={14} /> Dịch Vụ Khách Hàng
+                </div>
+                <h2 className="reservation-title">Đặt Bàn Trực Tuyến</h2>
+                <p className="reservation-subtitle">Đặt bàn trước để giữ chỗ đẹp nhất và nhận phục vụ chu đáo nhất.</p>
+              </div>
+
+              {latestReservation ? (
+                <div className="glass-panel booking-receipt animate-fade-in">
+                  <div className="receipt-header">
+                    <div className="receipt-success-icon">
+                      <CheckCircle size={44} style={{ display: 'inline' }} />
+                    </div>
+                    <h3 className="receipt-title">Đặt Bàn Thành Công</h3>
+                    <div className="receipt-code-label">Mã Số Đặt Bàn</div>
+                    <div className="receipt-code">{latestReservation.reservationCode}</div>
+                  </div>
+
+                  <div className="receipt-details-list">
+                    <div className="receipt-row">
+                      <span className="receipt-label">Quý Khách:</span>
+                      <span className="receipt-value">{latestReservation.customerName}</span>
+                    </div>
+                    <div className="receipt-row">
+                      <span className="receipt-label">Số Điện Thoại:</span>
+                      <span className="receipt-value">{latestReservation.phone}</span>
+                    </div>
+                    <div className="receipt-row">
+                      <span className="receipt-label">Số Khách Đi:</span>
+                      <span className="receipt-value">{latestReservation.guestCount} Khách</span>
+                    </div>
+                    <div className="receipt-row">
+                      <span className="receipt-label">Thời Gian Đặt:</span>
+                      <span className="receipt-value">{new Date(latestReservation.reservationTime).toLocaleString('vi-VN')}</span>
+                    </div>
+                    {latestReservation.note && (
+                      <div className="receipt-row">
+                        <span className="receipt-label">Ghi Chú:</span>
+                        <span className="receipt-value">{latestReservation.note}</span>
+                      </div>
+                    )}
+                    <div className="receipt-row">
+                      <span className="receipt-label">Trạng Thái:</span>
+                      <span className="receipt-value">
+                        <span className="badge badge-warning">Chờ Check-in</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="receipt-qr-area">
+                    <div className="receipt-qr-box">
+                      <div className="receipt-qr-mock">📱</div>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                      Quét hoặc Đưa mã QR check-in này cho nhân viên lễ tân khi đến nhà hàng.
+                    </p>
+                  </div>
+
+                  <div className="receipt-instructions">
+                    💡 <strong>Hướng dẫn đến nhà hàng:</strong> Quý khách vui lòng đến trước giờ hẹn 10-15 phút. Đặt bàn sẽ tự động lưu giữ tối đa 30 phút sau giờ đặt hẹn.
+                  </div>
+
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ width: '100%', marginTop: '24px' }}
+                    onClick={() => setLatestReservation(null)}
+                    id="btn-book-another"
+                  >
+                    Đặt Thêm Bàn Khác
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitReservation} className="glass-panel" style={{ padding: '32px', textAlign: 'left' }}>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="res-phone">Số Điện Thoại Liên Hệ *</label>
+                    <label className="form-label" htmlFor="res-name">Họ và Tên Khách Hàng *</label>
                     <div style={{ position: 'relative' }}>
-                      <Phone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                       <input 
-                        type="tel" 
-                        id="res-phone" 
+                        type="text" 
+                        id="res-name" 
                         className="form-control" 
                         style={{ paddingLeft: '44px' }}
-                        placeholder="0987654321" 
+                        placeholder="Nguyễn Văn A" 
                         required
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
                       />
                     </div>
                   </div>
 
+                  <div className="form-grid-row">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="res-phone">Số Điện Thoại Liên Hệ *</label>
+                      <div style={{ position: 'relative' }}>
+                        <Phone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <input 
+                          type="tel" 
+                          id="res-phone" 
+                          className="form-control" 
+                          style={{ paddingLeft: '44px' }}
+                          placeholder="0987654321" 
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="res-guests">Số Lượng Khách Đi *</label>
+                      <div style={{ position: 'relative' }}>
+                        <Users size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <select 
+                          id="res-guests" 
+                          className="form-control"
+                          style={{ paddingLeft: '44px', appearance: 'none' }}
+                          value={guestCount}
+                          onChange={(e) => setGuestCount(Number(e.target.value))}
+                        >
+                          <option value="1">1 Người</option>
+                          <option value="2">2 Người</option>
+                          <option value="4">4 Người</option>
+                          <option value="6">6 Người</option>
+                          <option value="8">8 Người</option>
+                          <option value="10">10+ Người (Phòng VIP)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="form-group">
-                    <label className="form-label" htmlFor="res-guests">Số Lượng Khách Đi *</label>
-                    <div style={{ position: 'relative' }}>
-                      <Users size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <select 
-                        id="res-guests" 
-                        className="form-control"
-                        style={{ paddingLeft: '44px', appearance: 'none' }}
-                        value={guestCount}
-                        onChange={(e) => setGuestCount(Number(e.target.value))}
-                      >
-                        <option value="1">1 Người</option>
-                        <option value="2">2 Người</option>
-                        <option value="4">4 Người</option>
-                        <option value="6">6 Người</option>
-                        <option value="8">8 Người</option>
-                        <option value="10">10+ Người (Phòng VIP)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="res-time">Thời Gian Nhận Bàn *</label>
-                  <input 
-                    type="datetime-local" 
-                    id="res-time" 
-                    className="form-control" 
-                    required
-                    value={reservationTime}
-                    onChange={(e) => setReservationTime(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="res-note">Ghi Chú Đặc Biệt</label>
-                  <textarea 
-                    id="res-note" 
-                    className="form-control" 
-                    placeholder="Ví dụ: Cần bàn sát cửa sổ, có trẻ em sơ sinh cần ghế trẻ em, hoặc tổ chức kỷ niệm ngày cưới..."
-                    value={reservationNote}
-                    onChange={(e) => setReservationNote(e.target.value)}
-                  ></textarea>
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="btn btn-primary" 
-                  style={{ width: '100%', marginTop: '10px' }}
-                  disabled={isSubmittingReservation}
-                  id="btn-submit-reservation"
-                >
-                  {isSubmittingReservation ? (
-                    <>
-                      <RefreshCw className="animate-float" size={18} style={{ animation: 'spin 1.5s linear infinite' }} /> Đang Tạo Đặt Bàn...
-                    </>
-                  ) : (
-                    <>Hoàn Tất Đặt Bàn</>
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: SIGNALR LIVE ORDER STATUS TRACKER */}
-        {activeTab === 'tracker' && (
-          <div className="animate-fade-in tracker-container">
-            <div className="tracker-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
-                <Clock size={14} /> Theo Dõi Gọi Món Realtime
-              </div>
-              <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Món Đang Đợi Bếp</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>Màn hình cập nhật trạng thái tự động qua SignalR và fallback polling.</p>
-            </div>
-
-            {placedOrders.length === 0 ? (
-              <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
-                <h3>Chưa có order nào được gửi đi</h3>
-                <p style={{ fontSize: '0.9rem', marginTop: '4px', maxWidth: '340px', marginInline: 'auto' }}>
-                  Quý khách vui lòng quét mã QR tại bàn, chọn món ngon từ thực đơn để gửi đơn gọi món.
-                </p>
-                <button 
-                  className="btn btn-primary" 
-                  style={{ marginTop: '24px' }} 
-                  onClick={() => setActiveTab('menu')}
-                >
-                  Xem Thực Đơn Gọi Món
-                </button>
-              </div>
-            ) : (
-              placedOrders.map(order => (
-                <div key={order.orderId} className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px' }}>
-                    <div>
-                      <div className="tracker-table-num">📍 Bàn {order.tableNumber}</div>
-                      <div className="tracker-order-code">Mã Đơn: <strong>{order.orderCode}</strong> | {new Date(order.placedAt).toLocaleTimeString('vi-VN')}</div>
-                    </div>
-                    <div>
-                      {order.status === 'Pending' && <span className="badge badge-warning">Chờ Bếp Nhận</span>}
-                      {order.status === 'Preparing' && <span className="badge badge-primary pulsing-glow">Đang Chế Biến</span>}
-                      {order.status === 'Ready' && <span className="badge badge-success pulsing-glow">Sẵn Sàng Phục Vụ</span>}
-                      {order.status === 'Served' && <span className="badge badge-success" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>Đã Lên Bàn</span>}
-                    </div>
+                    <label className="form-label" htmlFor="res-time">Thời Gian Nhận Bàn *</label>
+                    <input 
+                      type="datetime-local" 
+                      id="res-time" 
+                      className="form-control" 
+                      required
+                      value={reservationTime}
+                      onChange={(e) => setReservationTime(e.target.value)}
+                    />
                   </div>
 
-                  {/* Flow Steps for real-time order tracking (Flow 3.4) */}
-                  <div className="tracker-status-box">
-                    <div className={`tracker-status-step ${
-                      order.status === 'Pending' ? 'active' : 
-                      (order.status === 'Preparing' || order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
-                    }`}>
-                      <div className="tracker-step-icon-container">1</div>
-                      <div>
-                        <h4 className="tracker-step-title">Gửi Đơn & Chờ Nhận</h4>
-                        <p className="tracker-step-desc">Hệ thống đã gửi đơn xuống bếp bằng Token chống trùng (Idempotency).</p>
-                      </div>
-                    </div>
-
-                    <div className={`tracker-status-step ${
-                      order.status === 'Preparing' ? 'active' : 
-                      (order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
-                    }`}>
-                      <div className="tracker-step-icon-container">2</div>
-                      <div>
-                        <h4 className="tracker-step-title">Đang Chuẩn Bị (Preparing)</h4>
-                        <p className="tracker-step-desc">Đầu bếp đã nhận đơn và bắt đầu chế biến món ăn của bạn.</p>
-                      </div>
-                    </div>
-
-                    <div className={`tracker-status-step ${
-                      order.status === 'Ready' ? 'active' : 
-                      (order.status === 'Served') ? 'completed' : ''
-                    }`}>
-                      <div className="tracker-step-icon-container">3</div>
-                      <div>
-                        <h4 className="tracker-step-title">Đã Sẵn Sàng (Ready)</h4>
-                        <p className="tracker-step-desc">Món ăn chế biến xong hoàn hảo, nhân viên bưng bê đang mang tới.</p>
-                      </div>
-                    </div>
-
-                    <div className={`tracker-status-step ${order.status === 'Served' ? 'completed' : ''}`}>
-                      <div className="tracker-step-icon-container">4</div>
-                      <div>
-                        <h4 className="tracker-step-title">Đã Phục Vụ (Served)</h4>
-                        <p className="tracker-step-desc">Món ăn đã được phục vụ lên bàn của quý khách thành công.</p>
-                      </div>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="res-note">Ghi Chú Đặc Biệt</label>
+                    <textarea 
+                      id="res-note" 
+                      className="form-control" 
+                      placeholder="Ví dụ: Cần bàn sát cửa sổ, có trẻ em sơ sinh cần ghế trẻ em, hoặc tổ chức kỷ niệm ngày cưới..."
+                      value={reservationNote}
+                      onChange={(e) => setReservationNote(e.target.value)}
+                    ></textarea>
                   </div>
 
-                  {/* Order Items List */}
-                  <div className="tracker-items-section">
-                    <h4 className="tracker-items-title">Chi Tiết Đơn Gọi</h4>
-                    <div className="tracker-items-list">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="tracker-item-row">
-                          <div className="tracker-item-name-col">
-                            <div>
-                              <span className="tracker-item-qty">x{item.quantity}</span>
-                              <strong>{item.menuItemName}</strong>
-                            </div>
-                            {item.note && <span className="tracker-item-note">💡 Ghi chú: {item.note}</span>}
-                          </div>
-                          <div>
-                            {item.status === 'Pending' && <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Đang chờ</span>}
-                            {item.status === 'Preparing' && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Đang nấu</span>}
-                            {item.status === 'Ready' && <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Xong</span>}
-                            {item.status === 'Served' && <span className="badge badge-success" style={{ fontSize: '0.65rem', background: 'transparent' }}>Đã lên bàn</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* TAB 5: AI dining assistant chat (Flow 3.5) */}
-        {activeTab === 'ai' && (
-          <div className="animate-fade-in ai-container">
-            <div className="ai-header-info">
-              <div className="ai-avatar">🤖</div>
-              <div>
-                <h3 className="ai-title-text">Trợ Lý Khẩu Vị AI - Antigravity</h3>
-                <div className="ai-status-pulse">
-                  <span className="session-indicator"></span>
-                  <span>Đang Trực Tuyến | AI RAG Pipeline</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Chat History Panel */}
-            <div className="glass-panel ai-chat-history">
-              {chatMessages.map(msg => (
-                <div key={msg.id} className={`ai-chat-bubble ${msg.sender}`}>
-                  <div style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
-                  
-                  {/* Sources tag display */}
-                  {msg.sources && msg.sources.length > 0 && (
-                    <div className="ai-sources-row">
-                      <span>Dẫn nguồn RAG:</span>
-                      {msg.sources.map((src, idx) => (
-                        <span key={idx} className="ai-source-badge">{src}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Actions buttons dynamically simulated */}
-                  {msg.suggestedAction && (
-                    <div className="ai-suggested-actions">
-                      <button 
-                        className="btn btn-primary btn-outline" 
-                        style={{ fontSize: '0.82rem', padding: '8px 16px', background: 'rgba(255, 107, 53, 0.1)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
-                        onClick={() => handleApplySuggestedItems(msg.suggestedAction)}
-                      >
-                        <Sparkles size={14} /> {msg.suggestedAction.label}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {isAiTyping && (
-                <div className="ai-chat-bubble assistant" style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '12px 20px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite' }}></div>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite 0.2s' }}></div>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite 0.4s' }}></div>
-                </div>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', marginTop: '10px' }}
+                    disabled={isSubmittingReservation}
+                    id="btn-submit-reservation"
+                  >
+                    {isSubmittingReservation ? (
+                      <>
+                        <RefreshCw className="animate-float" size={18} style={{ animation: 'spin 1.5s linear infinite' }} /> Đang Tạo Đặt Bàn...
+                      </>
+                    ) : (
+                      <>Hoàn Tất Đặt Bàn</>
+                    )}
+                  </button>
+                </form>
               )}
             </div>
+          )}
 
-            {/* Dynamic suggested questions */}
-            <div className="ai-suggestions-grid" style={{ marginTop: '16px' }}>
-              <div className="ai-suggestions-label">Câu Hỏi Ý Kiến Gợi Ý:</div>
-              <div className="ai-suggestion-pills">
+          {/* TAB 4: SIGNALR LIVE ORDER STATUS TRACKER */}
+          {activeTab === 'tracker' && (
+            <div className="animate-fade-in tracker-container">
+              <div className="tracker-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  <Clock size={14} /> Theo Dõi Gọi Món Realtime
+                </div>
+                <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Món Đang Đợi Bếp</h2>
+                <p style={{ color: 'var(--text-secondary)' }}>Màn hình cập nhật trạng thái tự động qua SignalR và fallback polling.</p>
+              </div>
+
+              {placedOrders.length === 0 ? (
+                <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
+                  <h3>Chưa có order nào được gửi đi</h3>
+                  <p style={{ fontSize: '0.9rem', marginTop: '4px', maxWidth: '340px', marginInline: 'auto' }}>
+                    Quý khách vui lòng quét mã QR tại bàn, chọn món ngon từ thực đơn để gửi đơn gọi món.
+                  </p>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ marginTop: '24px' }} 
+                    onClick={() => setActiveTab('menu')}
+                  >
+                    Xem Thực Đơn Gọi Món
+                  </button>
+                </div>
+              ) : (
+                placedOrders.map(order => (
+                  <div key={order.orderId} className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px' }}>
+                      <div>
+                        <div className="tracker-table-num">📍 Bàn {order.tableNumber}</div>
+                        <div className="tracker-order-code">Mã Đơn: <strong>{order.orderCode}</strong> | {new Date(order.placedAt).toLocaleTimeString('vi-VN')}</div>
+                      </div>
+                      <div>
+                        {order.status === 'Pending' && <span className="badge badge-warning">Chờ Bếp Nhận</span>}
+                        {order.status === 'Preparing' && <span className="badge badge-primary pulsing-glow">Đang Chế Biến</span>}
+                        {order.status === 'Ready' && <span className="badge badge-success pulsing-glow">Sẵn Sàng Phục Vụ</span>}
+                        {order.status === 'Served' && <span className="badge badge-success" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>Đã Lên Bàn</span>}
+                      </div>
+                    </div>
+
+                    <div className="tracker-status-box">
+                      <div className={`tracker-status-step ${
+                        order.status === 'Pending' ? 'active' : 
+                        (order.status === 'Preparing' || order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
+                      }`}>
+                        <div className="tracker-step-icon-container">1</div>
+                        <div>
+                          <h4 className="tracker-step-title">Gửi Đơn & Chờ Nhận</h4>
+                          <p className="tracker-step-desc">Hệ thống đã gửi đơn xuống bếp bằng Token chống trùng (Idempotency).</p>
+                        </div>
+                      </div>
+
+                      <div className={`tracker-status-step ${
+                        order.status === 'Preparing' ? 'active' : 
+                        (order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
+                      }`}>
+                        <div className="tracker-step-icon-container">2</div>
+                        <div>
+                          <h4 className="tracker-step-title">Đang Chuẩn Bị (Preparing)</h4>
+                          <p className="tracker-step-desc">Đầu bếp đã nhận đơn và bắt đầu chế biến món ăn của bạn.</p>
+                        </div>
+                      </div>
+
+                      <div className={`tracker-status-step ${
+                        order.status === 'Ready' ? 'active' : 
+                        (order.status === 'Served') ? 'completed' : ''
+                      }`}>
+                        <div className="tracker-step-icon-container">3</div>
+                        <div>
+                          <h4 className="tracker-step-title">Đã Sẵn Sàng (Ready)</h4>
+                          <p className="tracker-step-desc">Món ăn chế biến xong hoàn hảo, nhân viên bưng bê đang mang tới.</p>
+                        </div>
+                      </div>
+
+                      <div className={`tracker-status-step ${order.status === 'Served' ? 'completed' : ''}`}>
+                        <div className="tracker-step-icon-container">4</div>
+                        <div>
+                          <h4 className="tracker-step-title">Đã Phục Vụ (Served)</h4>
+                          <p className="tracker-step-desc">Món ăn đã được phục vụ lên bàn của quý khách thành công.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="tracker-items-section">
+                      <h4 className="tracker-items-title">Chi Tiết Đơn Gọi</h4>
+                      <div className="tracker-items-list">
+                        {order.items.map((item, idx) => (
+                          <div key={idx} className="tracker-item-row">
+                            <div className="tracker-item-name-col">
+                              <div>
+                                <span className="tracker-item-qty">x{item.quantity}</span>
+                                <strong>{item.menuItemName}</strong>
+                              </div>
+                              {item.note && <span className="tracker-item-note">💡 Ghi chú: {item.note}</span>}
+                            </div>
+                            <div>
+                              {item.status === 'Pending' && <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Đang chờ</span>}
+                              {item.status === 'Preparing' && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Đang nấu</span>}
+                              {item.status === 'Ready' && <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Xong</span>}
+                              {item.status === 'Served' && <span className="badge badge-success" style={{ fontSize: '0.65rem', background: 'transparent' }}>Đã lên bàn</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: AI DINING ASSISTANT */}
+          {activeTab === 'ai' && (
+            <div className="animate-fade-in ai-container">
+              <div className="ai-header-info">
+                <div className="ai-avatar">🤖</div>
+                <div>
+                  <h3 className="ai-title-text">Trợ Lý Khẩu Vị AI - Antigravity</h3>
+                  <div className="ai-status-pulse">
+                    <span className="session-indicator"></span>
+                    <span>Đang Trực Tuyến | AI RAG Pipeline</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-panel ai-chat-history">
+                {chatMessages.map(msg => (
+                  <div key={msg.id} className={`ai-chat-bubble ${msg.sender}`}>
+                    <div style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
+                    
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="ai-sources-row">
+                        <span>Dẫn nguồn RAG:</span>
+                        {msg.sources.map((src, idx) => (
+                          <span key={idx} className="ai-source-badge">{src}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {msg.suggestedAction && (
+                      <div className="ai-suggested-actions">
+                        <button 
+                          className="btn btn-primary btn-outline" 
+                          style={{ fontSize: '0.82rem', padding: '8px 16px', background: 'rgba(255, 107, 53, 0.1)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                          onClick={() => handleApplySuggestedItems(msg.suggestedAction)}
+                        >
+                          <Sparkles size={14} /> {msg.suggestedAction.label}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {isAiTyping && (
+                  <div className="ai-chat-bubble assistant" style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '12px 20px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite' }}></div>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite 0.2s' }}></div>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite 0.4s' }}></div>
+                  </div>
+                )}
+              </div>
+
+              <div className="ai-suggestions-grid" style={{ marginTop: '16px' }}>
+                <div className="ai-suggestions-label">Câu Hỏi Ý Kiến Gợi Ý:</div>
+                <div className="ai-suggestion-pills">
+                  <button 
+                    className="ai-suggestion-pill"
+                    onClick={() => handleSendAiMessage("Đi 4 người khoảng 600k nên gọi combo món gì hợp lý?")}
+                  >
+                    Combo 4 người 600k?
+                  </button>
+                  <button 
+                    className="ai-suggestion-pill"
+                    onClick={() => handleSendAiMessage("Thực đơn có những món nào ngon không cay cho trẻ em?")}
+                  >
+                    Món trẻ em không cay?
+                  </button>
+                  <button 
+                    className="ai-suggestion-pill"
+                    onClick={() => handleSendAiMessage("Nhà hàng mình có tùy chọn món ăn chay không?")}
+                  >
+                    Có món ăn chay không?
+                  </button>
+                </div>
+              </div>
+
+              <div className="ai-input-row">
+                <input 
+                  type="text" 
+                  placeholder="Hỏi về món ăn, giá cả, hoặc đặt combo..." 
+                  className="form-control"
+                  value={aiInputValue}
+                  onChange={(e) => setAiInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendAiMessage()}
+                  disabled={isAiTyping}
+                  id="ai-chat-input"
+                />
                 <button 
-                  className="ai-suggestion-pill"
-                  onClick={() => handleSendAiMessage("Đi 4 người khoảng 600k nên gọi combo món gì hợp lý?")}
+                  className="btn btn-primary"
+                  onClick={() => handleSendAiMessage()}
+                  disabled={isAiTyping || !aiInputValue.trim()}
+                  id="btn-ai-send"
                 >
-                  Combo 4 người 600k?
-                </button>
-                <button 
-                  className="ai-suggestion-pill"
-                  onClick={() => handleSendAiMessage("Thực đơn có những món nào ngon không cay cho trẻ em?")}
-                >
-                  Món trẻ em không cay?
-                </button>
-                <button 
-                  className="ai-suggestion-pill"
-                  onClick={() => handleSendAiMessage("Nhà hàng mình có tùy chọn món ăn chay không?")}
-                >
-                  Có món ăn chay không?
+                  Gửi <Sparkles size={16} />
                 </button>
               </div>
             </div>
+          )}
 
-            {/* Input message form */}
-            <div className="ai-input-row">
-              <input 
-                type="text" 
-                placeholder="Hỏi về món ăn, giá cả, hoặc đặt combo..." 
-                className="form-control"
-                value={aiInputValue}
-                onChange={(e) => setAiInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendAiMessage()}
-                disabled={isAiTyping}
-                id="ai-chat-input"
-              />
-              <button 
-                className="btn btn-primary"
-                onClick={() => handleSendAiMessage()}
-                disabled={isAiTyping || !aiInputValue.trim()}
-                id="btn-ai-send"
-              >
-                Gửi <Sparkles size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-      </main>
+        </main>
+      </div>
 
       {/* -------------------------------------------------------------
-          TAB BAR MOBILE-FIRST FOOTER NAVIGATION
+          MOBILE STICKY BOTTOM NAVIGATION BAR (Screens < 1024px)
           ------------------------------------------------------------- */}
-      <nav className="glass-panel tab-navigation">
-        <button 
-          className={`tab-nav-btn ${activeTab === 'home' ? 'active' : ''}`}
-          onClick={() => setActiveTab('home')}
-          id="nav-btn-home"
-        >
+      <nav className="tab-navigation">
+        <button className={`tab-nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')} id="nav-btn-home">
           <span className="tab-nav-btn-icon">🏠</span>
           <span>Trang Chủ</span>
         </button>
-        <button 
-          className={`tab-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
-          onClick={() => setActiveTab('menu')}
-          id="nav-btn-menu"
-        >
+        <button className={`tab-nav-btn ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => { setActiveTab('menu'); setSearchKeyword(""); setSelectedCategory("all"); }} id="nav-btn-menu">
           <span className="tab-nav-btn-icon">🍲</span>
           <span>Thực Đơn</span>
         </button>
-        <button 
-          className={`tab-nav-btn ${activeTab === 'reservation' ? 'active' : ''}`}
-          onClick={() => setActiveTab('reservation')}
-          id="nav-btn-reservation"
-        >
+        <button className={`tab-nav-btn ${activeTab === 'reservation' ? 'active' : ''}`} onClick={() => setActiveTab('reservation')} id="nav-btn-reservation">
           <span className="tab-nav-btn-icon">📅</span>
           <span>Đặt Bàn</span>
         </button>
-        <button 
-          className={`tab-nav-btn ${activeTab === 'tracker' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tracker')}
-          id="nav-btn-tracker"
-        >
+        <button className={`tab-nav-btn ${activeTab === 'tracker' ? 'active' : ''}`} onClick={() => setActiveTab('tracker')} id="nav-btn-tracker">
           <span className="tab-nav-btn-icon">⏳</span>
           <span>Đơn Hàng</span>
         </button>
-        <button 
-          className={`tab-nav-btn ${activeTab === 'ai' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-          id="nav-btn-ai"
-        >
+        <button className={`tab-nav-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')} id="nav-btn-ai">
           <span className="tab-nav-btn-icon">🤖</span>
           <span>Trợ Lý AI</span>
         </button>
@@ -1309,7 +1505,6 @@ export function App() {
 
               <p className="modal-desc">{selectedDish.description}</p>
 
-              {/* Special instructions / notes inside details modal */}
               <div className="modal-notes-section">
                 <label className="form-label" htmlFor="dish-modal-notes" style={{ color: 'var(--primary)', fontWeight: 650, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>💡</span> Hướng Dẫn/Ghi Chú Nấu Món:
@@ -1359,7 +1554,7 @@ export function App() {
       )}
 
       {/* -------------------------------------------------------------
-          FLOATING STICKY CART BADGE ACTION (Flow 3.3)
+          FLOATING STICKY CART BADGE ACTION
           ------------------------------------------------------------- */}
       {getCartCount() > 0 && (
         <div className="floating-cart-btn pulsing-glow" onClick={() => setIsCartOpen(true)} id="btn-floating-cart">
@@ -1442,7 +1637,6 @@ export function App() {
                   <span className="cart-summary-total">{getCartTotal().toLocaleString('vi-VN')} ₫</span>
                 </div>
 
-                {/* Submitting order button with simulation */}
                 <button 
                   className="btn btn-primary" 
                   style={{ width: '100%' }}

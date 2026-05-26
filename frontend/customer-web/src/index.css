@@ -691,7 +691,7 @@ input:checked + .slider-switch:before {
   
   .app-main-content {
     margin-left: 0;
-    padding: 16px 16px 90px;
+    padding: 16px 16px 120px !important; /* Extra padding-bottom to scroll above bottom bar */
   }
   
   .desktop-header {
@@ -709,22 +709,25 @@ input:checked + .slider-switch:before {
   
   .tab-navigation {
     position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-    width: calc(100% - 32px);
-    max-width: 500px;
-    padding: 8px;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    bottom: 0;
+    left: 0;
+    transform: none;
+    z-index: 9999;
+    width: 100%;
+    max-width: none;
+    padding: 10px 12px 24px; /* Extra bottom padding for mobile home indicators */
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.3);
     display: flex;
     justify-content: space-around;
     align-items: center;
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid var(--border-color);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
   }
   
   .tab-nav-btn {
@@ -753,5 +756,21 @@ input:checked + .slider-switch:before {
   
   .tab-nav-btn-icon {
     font-size: 1.2rem;
+  }
+}
+
+/* 1 Column per row layout for products on Mobile screens */
+@media (max-width: 767px) {
+  .dishes-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  
+  .dish-card {
+    border-radius: var(--radius-md) !important;
+  }
+
+  .dish-image-wrapper {
+    height: 180px !important;
   }
 }

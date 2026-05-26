@@ -624,19 +624,14 @@ PaymentCompleted
 
 ### GET /health
 
-Kiểm tra trạng thái hoạt động của `Restaurant.Api` cho local, Docker và CI/CD.
-Đây là endpoint vận hành công khai và không sử dụng prefix `/api/v1`.
+Kiểm tra trạng thái hoạt động của Restaurant.Api (Backend Core). Endpoint này hoạt động tại root path (không có prefix `/api/v1`) để phục vụ kiểm tra trạng thái local, container health probe (Docker) và CI/CD.
 
-Response khi ứng dụng healthy:
+Response:
 
-```text
-HTTP 200 OK
-Healthy
-```
-
-Response khi health check không đạt:
-
-```text
-HTTP 503 Service Unavailable
-```
+- **HTTP Status 200 (OK):** Service hoạt động bình thường (Healthy).
+  - Content-Type: `text/plain`
+  - Response Body: `Healthy`
+- **HTTP Status 503 (Service Unavailable):** Gặp sự cố không hoạt động bình thường (Unhealthy).
+  - Content-Type: `text/plain`
+  - Response Body: `Unhealthy`
 

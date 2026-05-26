@@ -281,8 +281,8 @@
 
 /* 3. QR Session Simulation Header */
 .simulation-panel {
-  background: linear-gradient(90deg, #181a20 0%, #1e222b 100%);
-  border: 1px dashed rgba(255, 182, 39, 0.3);
+  background: linear-gradient(90deg, #101216 0%, #1c1e24 100%);
+  border: 1px dashed rgba(255, 107, 53, 0.4);
   padding: 14px 20px;
   border-radius: var(--radius-md);
   margin-bottom: 24px;
@@ -300,25 +300,25 @@
 }
 
 .simulation-icon {
-  color: var(--secondary);
+  color: var(--primary);
   font-size: 1.5rem;
 }
 
 .simulation-title {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
-  color: var(--text-primary);
+  color: #ffffff !important;
 }
 
 .simulation-desc {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: #9ca3af !important;
 }
 
 .simulation-btn {
-  background: rgba(255, 182, 39, 0.1);
-  color: var(--secondary);
-  border: 1px solid rgba(255, 182, 39, 0.3);
+  background: rgba(255, 107, 53, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(255, 107, 53, 0.35);
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -328,8 +328,9 @@
 }
 
 .simulation-btn:hover {
-  background: var(--secondary);
+  background: var(--primary);
   color: #07080a;
+  border-color: var(--primary);
 }
 
 @media (max-width: 640px) {

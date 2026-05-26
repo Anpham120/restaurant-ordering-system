@@ -1,0 +1,16 @@
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\bin\Debug\net10.0\Restaurant.Application.deps.json
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\bin\Debug\net10.0\Restaurant.Application.dll
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\bin\Debug\net10.0\Restaurant.Application.pdb
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.GeneratedMSBuildEditorConfig.editorconfig
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.AssemblyInfoInputs.cache
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.AssemblyInfo.cs
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.csproj.CoreCompileInputs.cache
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.sourcelink.json
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.dll
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\refint\Restaurant.Application.dll
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.pdb
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\ref\Restaurant.Application.dll
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\bin\Debug\net10.0\Restaurant.Domain.dll
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\bin\Debug\net10.0\Restaurant.Domain.pdb
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaurant.Application.csproj.AssemblyReference.cache
+D:\01_Projects\PRO\restaurant-ordering-system\backend\restaurant-api\src\Restaurant.Application\obj\Debug\net10.0\Restaura.8ED4ADA1.Up2Date

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -13,12 +14,21 @@ public static class MenuCategoriesEndpoints
         var group = app.MapGroup("/api/v1/menu/categories")
             .WithTags("Menu – Categories");
 
-        // GET /api/v1/menu/categories  — public
+        // GET /api/v1/menu/categories  — public; includeInactive chỉ dùng cho Manager
         group.MapGet("/", async (
             bool? includeInactive,
+            ClaimsPrincipal user,
             GetMenuCategoriesHandler handler,
             CancellationToken ct) =>
         {
+            if (includeInactive == true)
+            {
+                if (user.Identity?.IsAuthenticated != true)
+                    return Results.Unauthorized();
+                if (!user.IsInRole("Manager"))
+                    return Results.Forbid();
+            }
+
             var query = new GetMenuCategoriesQuery
             {
                 IncludeInactive = includeInactive ?? false,

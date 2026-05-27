@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Restaurant.Infrastructure.Data;
-using Restaurant.Infrastructure.Features.Menu.Categories;
-using Restaurant.Infrastructure.Features.Menu.Items;
 
 namespace Restaurant.Infrastructure;
 
@@ -19,21 +17,9 @@ public static class DependencyInjection
         }
 
         services.AddDbContext<RestaurantDbContext>(options =>
-            options
-                .UseNpgsql(
-                    connectionString,
-                    npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(RestaurantDbContext).Assembly.FullName))
-                .UseSnakeCaseNamingConvention());
-
-        // Menu Category handlers
-        services.AddScoped<GetMenuCategoriesHandler>();
-        services.AddScoped<CreateMenuCategoryHandler>();
-        services.AddScoped<UpdateMenuCategoryHandler>();
-
-        // Menu Item handlers
-        services.AddScoped<GetMenuItemsHandler>();
-        services.AddScoped<CreateMenuItemHandler>();
-        services.AddScoped<UpdateMenuItemHandler>();
+            options.UseNpgsql(
+                connectionString,
+                npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(RestaurantDbContext).Assembly.FullName)));
 
         return services;
     }

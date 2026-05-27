@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.config import get_settings
-from app.rag import FALLBACK_ANSWER, KnowledgeBase
+from app.rag import KnowledgeBase
 from app.schemas import (
     ApiResponse,
     ManagerReportRequest,
@@ -48,11 +48,13 @@ def recommend_combo(request: RecommendComboRequest) -> ApiResponse:
 
 @app.post(f"{settings.api_prefix}/ai/manager-report", response_model=ApiResponse)
 def manager_report(request: ManagerReportRequest) -> ApiResponse:
+    query = f"báo cáo doanh thu {request.date.isoformat()} doanh số món ăn"
+    result = knowledge_base.search(query)
     return ApiResponse(
         data={
             "date": request.date.isoformat(),
-            "summary": FALLBACK_ANSWER,
-            "sources": [],
+            "summary": result.answer,
+            "sources": result.sources,
         }
     )
 

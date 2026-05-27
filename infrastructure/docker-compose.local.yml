@@ -55,6 +55,21 @@ services:
       timeout: 5s
       retries: 5
 
+  restaurant-api:
+    build:
+      context: ../backend/restaurant-api
+      dockerfile: Dockerfile
+    container_name: restaurant-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=restaurant_ordering;Username=restaurant;Password=restaurant"
+    ports:
+      - "5000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   restaurant_postgres_data:
   restaurant_redis_data:

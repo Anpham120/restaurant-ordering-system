@@ -1,4 +1,6 @@
+using Restaurant.Application;
 using Restaurant.Infrastructure;
+using Restaurant.Api.Modules.Restaurant;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
+
+// Authorization – "ManagerOnly" policy placeholder (JWT wired in Issue #11)
+builder.Services.AddAuthentication();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ManagerOnly", policy =>
+        policy.RequireAuthenticatedUser());
+});
 
 var app = builder.Build();
 
@@ -21,6 +32,13 @@ app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), appBuilder =
     appBuilder.UseHttpsRedirection();
 });
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthChecks("/health");
+
+// Menu module
+app.MapMenuCategoriesEndpoints();
+app.MapMenuItemsEndpoints();
 
 app.Run();

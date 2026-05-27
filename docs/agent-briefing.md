@@ -62,7 +62,7 @@ infrastructure/docker-compose.local.yml
 
 Một số thư mục mục tiêu như `frontend/`, `services/ai-service/`, `.github/workflows/` và `infrastructure/nginx/` có thể chưa tồn tại ở thời điểm bắt đầu task. Khi issue yêu cầu triển khai các khu vực này, tạo đúng theo cấu trúc chuẩn ở mục 5 và cập nhật tài liệu liên quan.
 
-Backend hiện khởi tạo bằng ASP.NET Core với OpenAPI, health check `/health` và endpoint mẫu `/weatherforecast`. Khi thay endpoint mẫu bằng API thật, phải cập nhật `docs/api-contract.md`.
+Backend hiện khởi tạo bằng ASP.NET Core với OpenAPI, health check `/health` và endpoint mẫu `/weatherforecast`. Khi thay endpoint mẫu bằng API thật, phải cập nhật `docs/api-contract.md` và xóa code/template test không còn dùng.
 
 ---
 
@@ -253,6 +253,7 @@ Nếu tài liệu xung đột, ưu tiên tài liệu chuyên trách hơn tài li
 - Không để AI Service, Redis hoặc external API làm sập core flow.
 - Không bỏ health check.
 - Không dùng endpoint `/weatherforecast` làm contract nghiệp vụ thật.
+- Không để lại endpoint, seed, fixture hoặc dữ liệu test trong luồng production sau khi đã kiểm thử xong.
 - Không thêm dependency hạ tầng vào domain layer.
 
 ---

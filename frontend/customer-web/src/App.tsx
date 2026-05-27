@@ -660,11 +660,11 @@ export function App() {
           position: 'fixed',
           top: '24px',
           right: '24px',
-          background: 'rgba(255, 107, 53, 0.95)',
-          color: '#07080a',
+          background: 'var(--primary)',
+          color: 'var(--bg-deep)',
           padding: '14px 24px',
           borderRadius: '12px',
-          boxShadow: '0 10px 30px rgba(255, 107, 53, 0.3)',
+          boxShadow: '0 10px 30px rgba(var(--primary-rgb), 0.3)',
           fontWeight: 700,
           zIndex: 99999,
           fontSize: '0.9rem',
@@ -819,7 +819,7 @@ export function App() {
 
         {/* MOBILE QR SCAN STRIP (Mockup topmost element) */}
         {!sessionToken && (
-          <div className="mobile-qr-strip glass-panel" style={{ display: window.innerWidth < 1024 ? 'flex' : 'none', marginBottom: '16px', border: '1px solid rgba(255, 107, 53, 0.2)' }} onClick={handleSimulateQRScan}>
+          <div className="mobile-qr-strip glass-panel" style={{ display: window.innerWidth < 1024 ? 'flex' : 'none', marginBottom: '16px', border: '1px solid rgba(var(--primary-rgb), 0.2)' }} onClick={handleSimulateQRScan}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: 'var(--primary)' }}><ScanLine size={16} /></span>
               <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Quét QR để nhận menu trực tiếp tại bàn</span>
@@ -1379,7 +1379,7 @@ export function App() {
                       <div className="ai-suggested-actions">
                         <button 
                           className="btn btn-primary btn-outline" 
-                          style={{ fontSize: '0.82rem', padding: '8px 16px', background: 'rgba(255, 107, 53, 0.1)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                          style={{ fontSize: '0.82rem', padding: '8px 16px', background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
                           onClick={() => handleApplySuggestedItems(msg.suggestedAction)}
                         >
                           <Sparkles size={14} /> {msg.suggestedAction.label}

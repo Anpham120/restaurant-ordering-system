@@ -18,7 +18,7 @@
   color: #07080a;
   font-weight: 800;
   font-size: 1.4rem;
-  box-shadow: 0 4px 10px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);
 }
 
 .logo-text {
@@ -29,8 +29,8 @@
 }
 
 .session-info-bar {
-  background: rgba(255, 107, 53, 0.1);
-  border: 1px solid rgba(255, 107, 53, 0.2);
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
   padding: 6px 14px;
   border-radius: 9999px;
   font-size: 0.82rem;
@@ -83,7 +83,7 @@
   padding: 60px 40px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: radial-gradient(circle at top right, rgba(255, 107, 53, 0.12), transparent 60%),
+  background: radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.12), transparent 60%),
               radial-gradient(circle at bottom left, rgba(255, 182, 39, 0.05), transparent 50%),
               var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -142,7 +142,7 @@
   width: 280px;
   height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.15) 0%, transparent 70%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -265,8 +265,8 @@
 
 /* Specific theme classes */
 .promo-cay {
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.08) 0%, rgba(244, 63, 94, 0.02) 100%);
-  border-color: rgba(255, 107, 53, 0.15);
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08) 0%, rgba(244, 63, 94, 0.02) 100%);
+  border-color: rgba(var(--primary-rgb), 0.15);
 }
 
 .promo-khai-vi {
@@ -275,14 +275,14 @@
 }
 
 .promo-yeu-thich {
-  background: linear-gradient(135deg, rgba(255, 182, 39, 0.08) 0%, rgba(255, 107, 53, 0.02) 100%);
+  background: linear-gradient(135deg, rgba(255, 182, 39, 0.08) 0%, rgba(var(--primary-rgb), 0.02) 100%);
   border-color: rgba(255, 182, 39, 0.15);
 }
 
 /* 3. QR Session Simulation Header */
 .simulation-panel {
   background: linear-gradient(90deg, #101216 0%, #1c1e24 100%);
-  border: 1px dashed rgba(255, 107, 53, 0.4);
+  border: 1px dashed rgba(var(--primary-rgb), 0.4);
   padding: 14px 20px;
   border-radius: var(--radius-md);
   margin-bottom: 24px;
@@ -316,9 +316,9 @@
 }
 
 .simulation-btn {
-  background: rgba(255, 107, 53, 0.15);
+  background: rgba(var(--primary-rgb), 0.15);
   color: var(--primary);
-  border: 1px solid rgba(255, 107, 53, 0.35);
+  border: 1px solid rgba(var(--primary-rgb), 0.35);
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -437,7 +437,7 @@
   align-items: center;
   justify-content: center;
   font-size: 4.5rem;
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.05) 0%, rgba(255, 182, 39, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.05) 0%, rgba(255, 182, 39, 0.05) 100%);
 }
 
 .dish-badge-container {
@@ -504,9 +504,9 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 107, 53, 0.1);
+  background: rgba(var(--primary-rgb), 0.1);
   color: var(--primary);
-  border: 1px solid rgba(255, 107, 53, 0.2);
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1054,7 +1054,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
+  box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.4);
   cursor: pointer;
   z-index: 99;
   transition: var(--transition-normal);
@@ -1062,7 +1062,7 @@
 
 .floating-cart-btn:hover {
   transform: scale(1.08) translateY(-2px);
-  box-shadow: 0 10px 30px rgba(255, 107, 53, 0.6);
+  box-shadow: 0 10px 30px rgba(var(--primary-rgb), 0.5);
 }
 
 .floating-cart-btn-icon {
@@ -1314,7 +1314,7 @@
 }
 
 .tracker-status-step.active .tracker-step-icon-container {
-  background: rgba(255, 107, 53, 0.15);
+  background: rgba(var(--primary-rgb), 0.15);
   border-color: var(--primary);
   color: var(--primary);
   box-shadow: 0 0 10px var(--primary-glow);

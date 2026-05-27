@@ -1,0 +1,39 @@
+# Build output
+bin/
+obj/
+
+# .NET
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Visual Studio / Rider
+.vs/
+.idea/
+
+# Environment and local config
+.env
+.env.*
+!.env.example
+
+# Node / frontend
+node_modules/
+dist/
+build/
+coverage/
+
+# Python / AI service
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db

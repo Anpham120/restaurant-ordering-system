@@ -1,0 +1,11 @@
+@Restaurant_Api_HostAddress = http://localhost:5030
+
+GET {{Restaurant_Api_HostAddress}}/health
+Accept: text/plain
+
+###
+
+GET {{Restaurant_Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

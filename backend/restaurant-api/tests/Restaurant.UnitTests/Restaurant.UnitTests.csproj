@@ -18,4 +18,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Restaurant.Application\Restaurant.Application.csproj" />
+    <ProjectReference Include="..\..\src\Restaurant.Domain\Restaurant.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

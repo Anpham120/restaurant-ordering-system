@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Restaurant.Application.Features.Reservations.CheckIn;
 
 namespace Restaurant.Application;
 
@@ -6,8 +7,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Handlers are registered in Restaurant.Infrastructure.DependencyInjection
-        // This method is kept for future Application-only services (validators, etc.)
+        services.AddScoped<CheckInReservationService>();
+        services.AddSingleton(TimeProvider.System);
+
         return services;
     }
 }

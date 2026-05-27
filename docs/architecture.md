@@ -10,6 +10,8 @@ Modular Monolith + AI RAG Service riêng
 
 Kiến trúc này giúp giảm độ phức tạp so với microservices, nhưng vẫn giữ được tư duy phân tách module rõ ràng, dễ mở rộng và dễ chuyển đổi thành microservices trong tương lai.
 
+Backend core là một ứng dụng ASP.NET Core duy nhất. Các module nghiệp vụ được tách bằng namespace/project/layer nội bộ, không tách thành nhiều service deploy độc lập trong MVP. AI RAG Service là service riêng vì có runtime, dependency và pipeline dữ liệu khác với backend core.
+
 ---
 
 ## 2. Lý do chọn Modular Monolith
@@ -35,7 +37,44 @@ Trong phạm vi đồ án, hệ thống chọn Modular Monolith để:
 
 ---
 
-## 3. Sơ đồ kiến trúc tổng thể
+## 3. Hiện trạng triển khai trong repository
+
+Tại thời điểm tài liệu này được cập nhật, repository đã có:
+
+```text
+RestaurantOrderingSystem.slnx
+backend/restaurant-api/src/Restaurant.Api/
+backend/restaurant-api/src/Restaurant.Application/
+backend/restaurant-api/src/Restaurant.Domain/
+backend/restaurant-api/src/Restaurant.Infrastructure/
+backend/restaurant-api/tests/Restaurant.UnitTests/
+backend/restaurant-api/tests/Restaurant.IntegrationTests/
+docs/
+infrastructure/docker-compose.local.yml
+```
+
+`Restaurant.Api` hiện có baseline ASP.NET Core gồm:
+
+- OpenAPI trong môi trường development.
+- Health check tại `GET /health`.
+- HTTPS redirection, ngoại trừ `/health`.
+- Endpoint mẫu `/weatherforecast` từ template.
+
+Các phần sau là mục tiêu kiến trúc và có thể được tạo dần theo issue:
+
+```text
+frontend/customer-web/
+frontend/admin-web/
+services/ai-service/
+infrastructure/nginx/
+.github/workflows/
+```
+
+Khi một module hoặc service chưa tồn tại, không coi đó là lý do đổi kiến trúc. Issue triển khai phải tạo đúng vị trí đã quy ước.
+
+---
+
+## 4. Sơ đồ kiến trúc tổng thể
 
 ```text
 Customer Web
@@ -66,11 +105,24 @@ FastAPI AI RAG Service
     └── LLM Provider
 ```
 
+Luồng request chuẩn:
+
+```text
+Client
+→ Restaurant.Api
+→ Application use case
+→ Domain rule
+→ Infrastructure adapter
+→ PostgreSQL/Redis/AI Service nếu cần
+```
+
+Frontend không gọi trực tiếp database, Redis hoặc AI provider. Nếu cần AI, request đi qua API/hợp đồng đã định nghĩa.
+
 ---
 
-## 4. Thành phần hệ thống
+## 5. Thành phần hệ thống
 
-### 4.1. Customer Web
+### 5.1. Customer Web
 
 Ứng dụng dành cho khách hàng.
 
@@ -82,7 +134,7 @@ Chức năng chính:
 - Theo dõi trạng thái món
 - Hỏi AI tư vấn món
 
-### 4.2. Admin Web
+### 5.2. Admin Web
 
 Ứng dụng dành cho nhân viên, bếp, thu ngân và quản lý.
 
@@ -96,7 +148,7 @@ Chức năng chính:
 - Dashboard
 - AI báo cáo
 
-### 4.3. Restaurant.Api
+### 5.3. Restaurant.Api
 
 Backend chính của hệ thống, xây dựng bằng ASP.NET Core.
 
@@ -109,7 +161,7 @@ Chức năng:
 - Cung cấp SignalR Hub
 - Gọi AI Service khi cần
 
-### 4.4. AI Service
+### 5.4. AI Service
 
 Service riêng bằng FastAPI.
 
@@ -121,7 +173,7 @@ Chức năng:
 - Sinh báo cáo quản lý
 - Xây dựng và truy xuất vector store
 
-### 4.5. PostgreSQL
+### 5.5. PostgreSQL
 
 Cơ sở dữ liệu chính.
 
@@ -139,7 +191,7 @@ Lưu:
 - AI log
 - Audit log
 
-### 4.6. Redis
+### 5.6. Redis
 
 Dùng cho cache hoặc session nếu cần.
 
@@ -150,7 +202,7 @@ Trong MVP, Redis là optional nhưng vẫn có thể được dùng cho:
 - Rate limit
 - Realtime connection mapping
 
-### 4.7. SignalR
+### 5.7. SignalR
 
 Dùng cho realtime:
 
@@ -161,9 +213,40 @@ Dùng cho realtime:
 
 ---
 
-## 5. Module backend
+## 6. Backend layering
 
-### 5.1. Identity Module
+Backend được tổ chức thành các layer:
+
+```text
+Restaurant.Api
+├── endpoint, middleware, auth wiring, OpenAPI, health check, SignalR hub
+
+Restaurant.Application
+├── use case, command/query handler, DTO, validation, interface port
+
+Restaurant.Domain
+├── entity, value object, enum, domain service, invariant nghiệp vụ
+
+Restaurant.Infrastructure
+└── EF Core, repository, migration, Redis, AI client, external integration
+```
+
+Luật phụ thuộc:
+
+```text
+Restaurant.Api -> Restaurant.Application -> Restaurant.Domain
+Restaurant.Infrastructure -> Restaurant.Application
+Restaurant.Infrastructure -> Restaurant.Domain
+Restaurant.Domain -> không phụ thuộc layer khác
+```
+
+Domain không được phụ thuộc ASP.NET Core, EF Core, Redis, SignalR, FastAPI, LLM provider hoặc framework frontend.
+
+---
+
+## 7. Module backend
+
+### 7.1. Identity Module
 
 Phụ trách:
 
@@ -173,7 +256,7 @@ Phụ trách:
 - User
 - Phân quyền
 
-### 5.2. Restaurant Module
+### 7.2. Restaurant Module
 
 Phụ trách:
 
@@ -183,7 +266,7 @@ Phụ trách:
 - Table
 - Trạng thái bàn
 
-### 5.3. Reservation Module
+### 7.3. Reservation Module
 
 Phụ trách:
 
@@ -193,7 +276,7 @@ Phụ trách:
 - Check-in khách
 - Tạo table session
 
-### 5.4. Ordering Module
+### 7.4. Ordering Module
 
 Phụ trách:
 
@@ -202,7 +285,7 @@ Phụ trách:
 - Chống double submit bằng idempotency key
 - Theo dõi order status
 
-### 5.5. Kitchen Module
+### 7.5. Kitchen Module
 
 Phụ trách:
 
@@ -210,7 +293,7 @@ Phụ trách:
 - Cập nhật trạng thái món
 - Gửi realtime event cho staff/customer
 
-### 5.6. Billing Module
+### 7.6. Billing Module
 
 Phụ trách:
 
@@ -218,7 +301,7 @@ Phụ trách:
 - Xác nhận thanh toán
 - Đóng table session
 
-### 5.7. Dashboard Module
+### 7.7. Dashboard Module
 
 Phụ trách:
 
@@ -228,7 +311,7 @@ Phụ trách:
 - Món bán chạy
 - Báo cáo theo ngày
 
-### 5.8. Notification Module
+### 7.8. Notification Module
 
 Phụ trách:
 
@@ -238,7 +321,37 @@ Phụ trách:
 
 ---
 
-## 6. Luồng realtime
+## 8. Quan hệ giữa module
+
+Module backend giao tiếp qua use case và domain event nội bộ, không gọi trực tiếp controller hoặc database table của nhau.
+
+```text
+Reservation
+→ tạo TableSession
+→ phát TableStatusChanged
+
+Ordering
+→ tạo Order/OrderItem
+→ phát NewOrderCreated
+
+Kitchen
+→ cập nhật OrderItem status
+→ phát OrderItemPreparing/OrderItemReady/OrderItemServed
+
+Billing
+→ tạo Invoice, đóng TableSession
+→ phát PaymentCompleted
+
+Dashboard
+→ đọc dữ liệu tổng hợp
+→ phát DashboardUpdated nếu cần realtime
+```
+
+Các thay đổi cross-module phải được phản ánh trong API contract, DB schema hoặc realtime event list nếu contract bị ảnh hưởng.
+
+---
+
+## 9. Luồng realtime
 
 ```text
 Customer submits order
@@ -264,7 +377,7 @@ DashboardUpdated
 
 ---
 
-## 7. Luồng AI RAG
+## 10. Luồng AI RAG
 
 ```text
 User question
@@ -287,9 +400,11 @@ payment_policy.md
 faq.md
 ```
 
+AI Service không là thành phần bắt buộc để hoàn tất core flow đặt bàn, gọi món, bếp và thanh toán. Nếu AI lỗi hoặc thiếu dữ liệu, hệ thống phải trả response có kiểm soát và không làm sập flow chính.
+
 ---
 
-## 8. Deployment overview
+## 11. Deployment overview
 
 MVP deployment:
 
@@ -309,9 +424,29 @@ Docker Compose
 └── Admin Web
 ```
 
+Local development tối thiểu:
+
+```text
+docker compose -f infrastructure/docker-compose.local.yml up -d
+dotnet run --project backend/restaurant-api/src/Restaurant.Api/Restaurant.Api.csproj
+GET /health
+```
+
 ---
 
-## 9. Hướng mở rộng tương lai
+## 12. Ràng buộc kiến trúc
+
+- Không tách module backend thành service deploy riêng trong MVP nếu issue không yêu cầu rõ.
+- Không bỏ `GET /health`; endpoint này dùng cho local check, container health probe và CI/CD.
+- Không để frontend phụ thuộc vào shape response chưa có trong `docs/api-contract.md`.
+- Không thay database schema nếu chưa cập nhật `docs/db-schema.md`.
+- Không đưa secret, connection string thật hoặc API key vào repository.
+- Không để AI Service, Redis hoặc external provider là single point of failure cho core flow.
+- Không dùng `/weatherforecast` như API nghiệp vụ thật.
+
+---
+
+## 13. Hướng mở rộng tương lai
 
 Các module có thể tách dần thành microservices:
 
@@ -332,4 +467,3 @@ Các phần có thể bổ sung:
 - Payment Gateway
 - Mobile App
 - Advanced RAG Evaluation
-

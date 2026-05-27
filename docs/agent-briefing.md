@@ -44,6 +44,26 @@ Infrastructure
 └── GitHub Actions
 ```
 
+### Hiện trạng repository
+
+Repository hiện có sẵn phần khung backend và tài liệu nền tảng:
+
+```text
+backend/restaurant-api/
+├── src/Restaurant.Api/
+├── src/Restaurant.Application/
+├── src/Restaurant.Domain/
+├── src/Restaurant.Infrastructure/
+└── tests/
+
+docs/
+infrastructure/docker-compose.local.yml
+```
+
+Một số thư mục mục tiêu như `frontend/`, `services/ai-service/`, `.github/workflows/` và `infrastructure/nginx/` có thể chưa tồn tại ở thời điểm bắt đầu task. Khi issue yêu cầu triển khai các khu vực này, tạo đúng theo cấu trúc chuẩn ở mục 5 và cập nhật tài liệu liên quan.
+
+Backend hiện khởi tạo bằng ASP.NET Core với OpenAPI, health check `/health` và endpoint mẫu `/weatherforecast`. Khi thay endpoint mẫu bằng API thật, phải cập nhật `docs/api-contract.md`.
+
 ---
 
 ## 4. Luồng nghiệp vụ chính
@@ -143,6 +163,24 @@ Dashboard
 Notification
 ```
 
+Ranh giới layer backend:
+
+```text
+Restaurant.Api
+├── nhận HTTP request, cấu hình middleware, OpenAPI, health check, SignalR hub
+
+Restaurant.Application
+├── use case, DTO, validation, interface cho infrastructure
+
+Restaurant.Domain
+├── entity, value object, enum, domain rule
+
+Restaurant.Infrastructure
+└── database, repository, external service, cache, AI client implementation
+```
+
+Không để `Restaurant.Domain` phụ thuộc vào ASP.NET Core, Entity Framework, Redis, AI provider hoặc framework UI.
+
 ### Frontend
 
 Customer UI:
@@ -177,6 +215,19 @@ docs/
 README.md
 ```
 
+Source of truth:
+
+```text
+docs/agent-briefing.md       - luật làm việc và ranh giới cho người/AI agent
+docs/architecture.md         - kiến trúc hệ thống và trách nhiệm module
+docs/api-contract.md         - contract REST/SignalR/AI API
+docs/db-schema.md            - schema database và rule migration
+docs/ui-flow.md              - luồng màn hình và hành vi UI
+docs/git-workflow-guide.md   - branch, commit, PR, review
+```
+
+Nếu tài liệu xung đột, ưu tiên tài liệu chuyên trách hơn tài liệu tổng quan. Ví dụ API theo `docs/api-contract.md`, database theo `docs/db-schema.md`, UI theo `docs/ui-flow.md`.
+
 ---
 
 ## 7. Quy tắc bắt buộc cho người và AI agent
@@ -201,6 +252,8 @@ README.md
 - Không code trực tiếp vào `develop` trừ khi được leader cho phép.
 - Không để AI Service, Redis hoặc external API làm sập core flow.
 - Không bỏ health check.
+- Không dùng endpoint `/weatherforecast` làm contract nghiệp vụ thật.
+- Không thêm dependency hạ tầng vào domain layer.
 
 ---
 
@@ -328,7 +381,43 @@ Một task chỉ được coi là hoàn thành khi:
 
 ---
 
-## 15. Tài liệu bắt buộc đọc trước khi code
+## 15. Hướng dẫn kiểm thử theo loại task
+
+Tùy phạm vi task, tối thiểu cần kiểm tra:
+
+```text
+Docs-only:
+- Đọc lại file đã sửa để kiểm tra link, heading, phạm vi và checklist issue.
+- Xác nhận không thay đổi API contract hoặc DB schema nếu issue không yêu cầu.
+
+Backend:
+- dotnet build RestaurantOrderingSystem.slnx
+- dotnet test backend/restaurant-api/tests/Restaurant.UnitTests/Restaurant.UnitTests.csproj
+- dotnet test backend/restaurant-api/tests/Restaurant.IntegrationTests/Restaurant.IntegrationTests.csproj nếu có test liên quan
+- Gọi GET /health khi chạy API local
+
+Frontend:
+- npm install nếu chưa có node_modules
+- npm run lint
+- npm run build
+- Kiểm tra luồng UI liên quan trong browser
+
+AI Service:
+- pip install -r requirements.txt
+- pytest nếu có test
+- Kiểm tra câu trả lời không bịa dữ liệu ngoài knowledge base
+
+DevOps:
+- docker compose -f infrastructure/docker-compose.local.yml config
+- docker compose -f infrastructure/docker-compose.local.yml up -d
+- Kiểm tra container, health check và log lỗi
+```
+
+Nếu một lệnh chưa chạy được vì phần tương ứng chưa tồn tại, báo rõ trong PR thay vì đánh dấu pass.
+
+---
+
+## 16. Tài liệu bắt buộc đọc trước khi code
 
 Trước khi code bất kỳ issue nào, bắt buộc đọc:
 

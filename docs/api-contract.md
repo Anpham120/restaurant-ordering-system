@@ -40,6 +40,7 @@ Quy ước:
 - Endpoint nghiệp vụ của backend dùng prefix `/api/v1`.
 - `GET /health` không dùng prefix để phục vụ container health probe và CI/CD.
 - Endpoint template `/weatherforecast` không phải contract nghiệp vụ.
+- Endpoint hoặc response dùng để test thử phải được xóa khỏi code/API contract trước khi merge, trừ khi được ghi rõ là demo-only và có cách reset dữ liệu.
 
 ---
 

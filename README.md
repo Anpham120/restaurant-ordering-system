@@ -579,6 +579,8 @@ Mỗi issue cần có:
 
 Pull Request dùng để review và merge code từ feature branch vào `develop`.
 
+Commit message, tiêu đề Pull Request và mô tả Pull Request phải viết bằng tiếng Việt. Chỉ giữ nguyên tiếng Anh với tên lệnh, tên file, mã lỗi, keyword kỹ thuật hoặc nội dung trích dẫn từ công cụ.
+
 Mẫu mô tả Pull Request:
 
 ```markdown

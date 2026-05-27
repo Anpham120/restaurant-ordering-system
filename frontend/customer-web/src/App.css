@@ -15,7 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #07080a;
+  color: var(--text-on-primary);
   font-weight: 800;
   font-size: 1.4rem;
   box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);
@@ -71,7 +71,7 @@
 
 .theme-toggle-btn:hover {
   background: var(--primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   border-color: var(--primary);
   transform: scale(1.05);
   box-shadow: 0 0 12px var(--primary-glow);
@@ -248,7 +248,7 @@
 
 .feature-promo-card:hover .feature-promo-btn {
   background: var(--primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   border-color: var(--primary);
 }
 
@@ -329,7 +329,7 @@
 
 .simulation-btn:hover {
   background: var(--primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   border-color: var(--primary);
 }
 
@@ -389,7 +389,7 @@
 
 .category-tab.active {
   background: var(--primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   border-color: var(--primary);
   font-weight: 600;
   box-shadow: 0 4px 12px var(--primary-glow);
@@ -516,7 +516,7 @@
 
 .dish-btn-add:hover {
   background: var(--primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   border-color: var(--primary);
   box-shadow: 0 4px 10px var(--primary-glow);
 }
@@ -724,7 +724,7 @@
   left: 0;
   width: 100%;
   height: 4px;
-  background-image: linear-gradient(90deg, transparent 4px, #07080a 4px);
+  background-image: linear-gradient(90deg, transparent 4px, var(--bg-deep) 4px);
   background-size: 8px 4px;
 }
 
@@ -816,7 +816,7 @@
 
 .receipt-qr-mock {
   font-size: 5rem;
-  color: #07080a;
+  color: #000000;
 }
 
 .receipt-instructions {
@@ -1050,7 +1050,7 @@
   height: 60px;
   border-radius: 50%;
   background: var(--grad-primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1161,7 +1161,7 @@
 .ai-chat-bubble.user {
   align-self: flex-end;
   background: var(--grad-primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   font-weight: 500;
   border-bottom-right-radius: var(--radius-sm);
 }

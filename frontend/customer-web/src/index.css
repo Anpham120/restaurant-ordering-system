@@ -7,36 +7,38 @@
 }
 
 :root {
-  --bg-deep: #080c14; /* Deep space navy blue */
-  --bg-surface: #0f172a; /* Slate navy */
-  --bg-surface-elevated: #1e293b; /* Slate 800 */
+  --bg-deep: #000000; /* Pure pitch black */
+  --bg-surface: #0a0a0a; /* Obsidian slate */
+  --bg-surface-elevated: #141414; /* Sleek charcoal card background */
   
-  --primary-rgb: 56, 189, 248; /* Sky-300 */
+  --primary-rgb: 255, 255, 255; /* Crisp pure white */
   --primary: rgb(var(--primary-rgb));
-  --primary-hover: #0ea5e9;
+  --primary-hover: #e5e5e5;
   --primary-glow: rgba(var(--primary-rgb), 0.25);
   
-  --secondary: #0d9488; /* Beautiful teal */
-  --secondary-glow: rgba(13, 148, 136, 0.2);
-  --text-primary: #f8fafc; /* Luminous slate 50 */
-  --text-secondary: #cbd5e1; /* Slate 300 */
-  --text-muted: #94a3b8; /* Slate 400 */
+  --secondary: #e5e5e5; /* Delicate off-white */
+  --secondary-glow: rgba(229, 229, 229, 0.2);
+  --text-primary: #ffffff; /* Luminous clean white */
+  --text-secondary: #a3a3a3; /* Neutral gray */
+  --text-muted: #737373; /* Muted gray */
   
-  --border-color: rgba(56, 189, 248, 0.12); /* Subtle blue-tinted border */
-  --border-focus: rgba(56, 189, 248, 0.5);
-  --border-hover: rgba(56, 189, 248, 0.2);
+  --text-on-primary: #000000; /* Black text on white accent buttons */
   
-  --glass-bg: rgba(15, 23, 42, 0.7); /* Deep blue-tinted glass */
+  --border-color: rgba(255, 255, 255, 0.08); /* Sophisticated crisp border */
+  --border-focus: rgba(255, 255, 255, 0.5);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  
+  --glass-bg: rgba(10, 10, 10, 0.8); /* Premium dark frosted glass */
   --glass-card-bg: rgba(255, 255, 255, 0.015);
   --success: #10b981;
   --success-glow: rgba(16, 185, 129, 0.2);
   --danger: #f43f5e;
   --danger-glow: rgba(244, 63, 94, 0.2);
   --warning: #f59e0b;
-  --info: #0ea5e9;
+  --info: #ffffff;
   
-  --grad-primary: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); /* Gorgeous sky/ocean gradient */
-  --grad-dark: linear-gradient(180deg, #0f172a 0%, #080c14 100%);
+  --grad-primary: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%); /* Gorgeous white to gray gradient */
+  --grad-dark: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
   --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
   
   --font-heading: 'Outfit', sans-serif;
@@ -49,41 +51,43 @@
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
   --shadow-glow: 0 0 25px var(--primary-glow);
 }
 
 body.light-theme {
-  --bg-deep: #f0f6fa; /* Softest sky-blue tinted light background */
-  --bg-surface: #ffffff; /* Crisp white for container/cards */
-  --bg-surface-elevated: #e2eaf4; /* Beautiful soft blue-grey for interactive components */
+  --bg-deep: #fafafa; /* Minimal bright ivory background */
+  --bg-surface: #ffffff; /* Snow white card background */
+  --bg-surface-elevated: #f3f3f3; /* Elegant clean grey surfaces */
   
-  --primary-rgb: 2, 132, 199; /* Sky-600 */
+  --primary-rgb: 0, 0, 0; /* Bold stark black */
   --primary: rgb(var(--primary-rgb));
-  --primary-hover: #0369a1;
+  --primary-hover: #262626;
   --primary-glow: rgba(var(--primary-rgb), 0.15);
   
-  --secondary: #0f766e; /* Sophisticated deep teal */
-  --secondary-glow: rgba(15, 118, 110, 0.15);
+  --secondary: #262626; /* Dark slate charcoal */
+  --secondary-glow: rgba(38, 38, 38, 0.15);
   
-  --text-primary: #0f172a; /* Slate 900 for ultra crisp text readability */
-  --text-secondary: #334155; /* Slate 700 */
-  --text-muted: #64748b; /* Slate 500 */
+  --text-primary: #000000; /* Crisp stark black text */
+  --text-secondary: #404040; /* Neutral dark grey */
+  --text-muted: #737373; /* Muted neutral grey */
   
-  --border-color: rgba(15, 23, 42, 0.08); /* Extremely delicate light slate border */
-  --border-focus: rgba(2, 132, 199, 0.4);
-  --border-hover: rgba(15, 23, 42, 0.12);
+  --text-on-primary: #ffffff; /* White text on black accent buttons */
   
-  --glass-bg: rgba(255, 255, 255, 0.85); /* Frosty milky glass */
-  --glass-card-bg: rgba(255, 255, 255, 0.7);
-  --grad-primary: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); /* Radiant sky-blue gradient */
-  --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 249, 255, 0.85) 100%);
+  --border-color: rgba(0, 0, 0, 0.08); /* Clean modern thin grey border */
+  --border-focus: rgba(0, 0, 0, 0.4);
+  --border-hover: rgba(0, 0, 0, 0.15);
   
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.9); /* Pure white frosty glass */
+  --glass-card-bg: rgba(0, 0, 0, 0.015);
+  --grad-primary: linear-gradient(135deg, #000000 0%, #404040 100%); /* Radiant black/charcoal gradient */
+  --grad-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 240, 240, 0.85) 100%);
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
 }
 
 body {
@@ -178,7 +182,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-primary {
   background: var(--grad-primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   box-shadow: 0 4px 15px var(--primary-glow);
 }
 
@@ -670,7 +674,7 @@ input:checked + .slider-switch:before {
   align-items: center;
   gap: 8px;
   background: var(--grad-primary);
-  color: #07080a;
+  color: var(--text-on-primary);
   border: none;
   font-size: 0.88rem;
   font-weight: 700;

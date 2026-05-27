@@ -22,7 +22,7 @@ public sealed class CheckInReservationService(
                 CheckInFailureType.NotFound);
         }
 
-        if (reservation.Status != ReservationStatus.Confirmed.ToString())
+        if (reservation.Status != nameof(ReservationStatus.Confirmed))
         {
             return CheckInReservationResult.Failure(
                 "BUSINESS_RULE_VIOLATION",
@@ -68,9 +68,9 @@ public sealed class CheckInReservationService(
             CreatedBy = createdBy
         };
 
-        reservation.Status = ReservationStatus.CheckedIn.ToString();
+        reservation.Status = nameof(ReservationStatus.CheckedIn);
         reservation.UpdatedAt = openedAt;
-        reservation.AssignedTable.Status = TableStatus.Occupied.ToString();
+        reservation.AssignedTable.Status = nameof(TableStatus.Occupied);
         reservation.AssignedTable.UpdatedAt = openedAt;
 
         store.Add(tableSession);

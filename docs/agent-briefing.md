@@ -250,6 +250,7 @@ Nếu tài liệu xung đột, ưu tiên tài liệu chuyên trách hơn tài li
 - Không commit `.env`, API key, token, password thật.
 - Không code trực tiếp vào `main`.
 - Không code trực tiếp vào `develop` trừ khi được leader cho phép.
+- Không viết commit message, tiêu đề Pull Request hoặc mô tả Pull Request bằng tiếng Anh, trừ tên lệnh, tên file, mã lỗi, keyword kỹ thuật hoặc nội dung trích dẫn.
 - Không để AI Service, Redis hoặc external API làm sập core flow.
 - Không bỏ health check.
 - Không dùng endpoint `/weatherforecast` làm contract nghiệp vụ thật.

@@ -123,7 +123,7 @@ git push -u origin feature/12-login-api
 
 ## 6. Quy ước commit message
 
-Sử dụng tiếng Việt, có tiền tố rõ ràng.
+Commit message bắt buộc dùng tiếng Việt, có tiền tố rõ ràng.
 
 ```text
 feat: thêm tính năng mới
@@ -155,6 +155,8 @@ Sau khi push branch, tạo Pull Request trên GitHub:
 base: develop
 compare: feature/<issue-number>-<task-name>
 ```
+
+Tiêu đề và mô tả Pull Request bắt buộc dùng tiếng Việt. Chỉ giữ nguyên tiếng Anh với tên lệnh, tên file, mã lỗi, keyword kỹ thuật hoặc nội dung trích dẫn từ công cụ.
 
 Ví dụ:
 
@@ -313,4 +315,3 @@ git pull origin develop
 ```
 
 Sau đó nhận issue và tạo feature branch.
-

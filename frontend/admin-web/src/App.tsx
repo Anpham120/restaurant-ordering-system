@@ -1057,8 +1057,16 @@ function App() {
                         <h3>Lượng Đơn Hàng Theo Giờ</h3>
                         <div className="css-bar-chart">
                           <div className="chart-bar-container">
+                            <div className="chart-bar-fill" style={{ height: '15%' }}></div>
+                            <span className="bar-label">08:00</span>
+                          </div>
+                          <div className="chart-bar-container">
                             <div className="chart-bar-fill" style={{ height: '25%' }}></div>
                             <span className="bar-label">09:00</span>
+                          </div>
+                          <div className="chart-bar-container">
+                            <div className="chart-bar-fill" style={{ height: '20%' }}></div>
+                            <span className="bar-label">10:00</span>
                           </div>
                           <div className="chart-bar-container">
                             <div className="chart-bar-fill" style={{ height: '45%' }}></div>
@@ -1073,20 +1081,40 @@ function App() {
                             <span className="bar-label">13:00</span>
                           </div>
                           <div className="chart-bar-container">
+                            <div className="chart-bar-fill" style={{ height: '15%' }}></div>
+                            <span className="bar-label">14:00</span>
+                          </div>
+                          <div className="chart-bar-container">
                             <div className="chart-bar-fill" style={{ height: '20%' }}></div>
                             <span className="bar-label">15:00</span>
+                          </div>
+                          <div className="chart-bar-container">
+                            <div className="chart-bar-fill" style={{ height: '30%' }}></div>
+                            <span className="bar-label">16:00</span>
                           </div>
                           <div className="chart-bar-container">
                             <div className="chart-bar-fill" style={{ height: '55%' }}></div>
                             <span className="bar-label">17:00</span>
                           </div>
                           <div className="chart-bar-container">
+                            <div className="chart-bar-fill highlight-primary" style={{ height: '80%' }}></div>
+                            <span className="bar-label">18:00</span>
+                          </div>
+                          <div className="chart-bar-container">
                             <div className="chart-bar-fill highlight-primary" style={{ height: '95%' }}></div>
                             <span className="bar-label">19:00</span>
                           </div>
                           <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '30%' }}></div>
+                            <div className="chart-bar-fill" style={{ height: '65%' }}></div>
+                            <span className="bar-label">20:00</span>
+                          </div>
+                          <div className="chart-bar-container">
+                            <div className="chart-bar-fill" style={{ height: '40%' }}></div>
                             <span className="bar-label">21:00</span>
+                          </div>
+                          <div className="chart-bar-container">
+                            <div className="chart-bar-fill" style={{ height: '10%' }}></div>
+                            <span className="bar-label">22:00</span>
                           </div>
                         </div>
                         <span className="chart-legend-text">* Khung giờ 12:00 và 19:00 là thời điểm lượng khách tập trung đông nhất trong ngày.</span>

@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
-import { 
-  Utensils, 
-  Calendar, 
-  ShoppingBag, 
-  Search, 
-  Plus, 
-  Minus, 
-  X, 
-  Clock, 
-  User, 
-  Phone, 
-  Users, 
-  CheckCircle, 
-  RefreshCw, 
+import {
+  Utensils,
+  Calendar,
+  ShoppingBag,
+  Search,
+  Plus,
+  Minus,
+  X,
+  Clock,
+  User,
+  Phone,
+  Users,
+  CheckCircle,
+  RefreshCw,
   Sparkles,
   Sun,
   Moon,
@@ -23,7 +23,13 @@ import {
   Tag,
   Newspaper,
   Bell,
-  ScanLine
+  ScanLine,
+  Grid,
+  Leaf,
+  Soup,
+  Flame,
+  CupSoda,
+  Cookie
 } from 'lucide-react';
 import './App.css';
 
@@ -107,109 +113,109 @@ const MOCK_MENU: MenuItem[] = [
   {
     id: "dish-001",
     name: "Lẩu Thái Hải Sản Tinh Hoa",
-    description: "Nước lẩu chua cay chuẩn vị Thái, ăn kèm hải sản tươi sống (tôm, mực, nghêu), nấm đông cô và các loại rau xanh thanh mát.",
-    price: 299000,
+    description: "Nước lẩu chua cay, đậm đà vị Thái",
+    price: 239000,
     categoryId: "cat-hotpot",
     categoryName: "Món Lẩu",
-    tags: ["cay", "bán chạy", "nổi bật"],
+    tags: ["cay", "bán chạy"],
     isAvailable: true,
-    imageUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80",
     emoji: "🍲"
   },
   {
     id: "dish-002",
-    name: "Gỏi Cuốn Tôm Thịt Thanh Nhã",
-    description: "Tôm luộc đỏ au, ba chỉ luộc mềm thơm cuộn cùng bánh tráng, rau sống tươi rói, ăn kèm sốt tương đen đậu phộng béo bùi.",
-    price: 69000,
+    name: "Cá Hồi Sốt Chanh Dây",
+    description: "Cá hồi tươi, sốt chanh dây thơm mát",
+    price: 159000,
     categoryId: "cat-appetizer",
     categoryName: "Khai Vị",
-    tags: ["thanh đạm", "khai vị"],
+    tags: ["khai vị", "đặc sản"],
     isAvailable: true,
-    imageUrl: "",
-    emoji: "🌯"
+    imageUrl: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=600&q=80",
+    emoji: "🍣"
   },
   {
     id: "dish-003",
-    name: "Cánh Gà Chiên Nước Mắm Tỏi Ớt",
-    description: "Cánh gà chiên giòn rụm bên ngoài, mọng nước bên trong, được phủ lớp sốt nước mắm Phú Quốc sánh quyện và tỏi ớt phi thơm.",
-    price: 99000,
+    name: "Gà Chiên Nước Mắm Tỏi Ớt",
+    description: "Gà giòn rụm, sốt mắm tỏi ớt đậm đà",
+    price: 189000,
     categoryId: "cat-appetizer",
     categoryName: "Khai Vị",
-    tags: ["mặn ngọt", "được thích", "bán chạy"],
+    tags: ["mặn ngọt", "bán chạy"],
     isAvailable: true,
-    imageUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=600&q=80",
     emoji: "🍗"
   },
   {
     id: "dish-004",
     name: "Bò Lúc Lắc Khoai Tây Giòn",
-    description: "Thịt thăn bò Mỹ thái quân cờ xào to lửa sốt tiêu đen hành tây, ăn kèm khoai tây chiên muối vàng ươm và xà lách trộn.",
-    price: 189000,
+    description: "Thịt thăn bò Mỹ quân cờ xào tiêu đen hành tây, ăn kèm khoai tây chiên giòn.",
+    price: 219000,
     categoryId: "cat-main",
     categoryName: "Món Chính",
     tags: ["bò", "trẻ em yêu thích", "nổi bật"],
     isAvailable: true,
-    imageUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80",
     emoji: "🥩"
   },
   {
     id: "dish-005",
     name: "Cơm Chiên Hải Sản Hạt Sen",
-    description: "Cơm trắng đảo tơi vàng ươm cùng trứng gà ta, rắc tôm mực thái hạt lựu, hạt sen bùi béo và hành lá thơm phức.",
-    price: 119000,
+    description: "Cơm chiên tơi xốp cùng trứng, tôm mực thái hạt lựu và hạt sen thơm bùi.",
+    price: 139000,
     categoryId: "cat-main",
     categoryName: "Món Chính",
     tags: ["dễ ăn", "ăn no"],
     isAvailable: true,
-    imageUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
     emoji: "🍛"
   },
   {
     id: "dish-006",
     name: "Nước Cam Vắt Nguyên Chất",
-    description: "Cam sành tươi vắt lấy nước, thêm chút đá mát lạnh giúp thanh lọc cơ thể và giải nhiệt sảng khoái.",
-    price: 39000,
+    description: "Cam sành tươi chín mọng vắt nguyên chất, giàu vitamin C thanh nhiệt cơ thể.",
+    price: 49000,
     categoryId: "cat-drink",
     categoryName: "Đồ Uống",
-    tags: ["thanh nhiệt", "healthy"],
+    tags: ["healthy", "thanh nhiệt"],
     isAvailable: true,
-    imageUrl: "",
-    emoji: "🍹"
+    imageUrl: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=600&q=80",
+    emoji: "🍊"
   },
   {
     id: "dish-007",
-    name: "Trà Đào Sả Hồng Trứ Danh",
-    description: "Cốt trà đen đậm đà pha cùng đào ngâm thơm lừng, điểm xuyết vài lát sả tươi thơm nồng và hạt chia bổ dưỡng.",
-    price: 45000,
+    name: "Soda Chanh Dây Bạc Hà",
+    description: "Giải nhiệt sảng khoái, thơm mát",
+    price: 79000,
     categoryId: "cat-drink",
     categoryName: "Đồ Uống",
-    tags: ["bán chạy", "thanh mát", "được thích"],
+    tags: ["đồ uống", "thanh mát"],
     isAvailable: true,
-    imageUrl: "",
-    emoji: "🍑"
+    imageUrl: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80",
+    emoji: "🍹"
   },
   {
     id: "dish-008",
     name: "Kem Bơ Sầu Riêng Đắk Lắk",
-    description: "Bơ sáp xay mịn béo ngậy kết hợp một viên kem vani Pháp sang trọng và một múi sầu riêng RI6 tươi chín mọng ngon ngọt.",
-    price: 59000,
+    description: "Bơ sáp xay mịn béo ngậy ăn kèm một viên kem vani Pháp và múi sầu riêng RI6.",
+    price: 69000,
     categoryId: "cat-dessert",
     categoryName: "Tráng Miệng",
     tags: ["béo ngậy", "đặc sản"],
     isAvailable: true,
-    imageUrl: "",
+    imageUrl: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80",
     emoji: "🥑"
   },
   {
     id: "dish-009",
-    name: "Bánh Tiramisu Cà Phê Moka",
-    description: "Bánh ngọt kiểu Ý mềm mịn đan xen lớp kem phô mai mascarpone béo ngậy và cốt bánh đẫm hương vị cà phê moka thơm đậm.",
-    price: 49000,
+    name: "Tiramisu Cà Phê",
+    description: "Béo mịn, thơm hương cà phê",
+    price: 99000,
     categoryId: "cat-dessert",
     categoryName: "Tráng Miệng",
-    tags: ["ngọt ngào", "nổi bật"],
-    isAvailable: false, // Out of stock
-    imageUrl: "",
+    tags: ["tráng miệng", "ngọt ngào"],
+    isAvailable: true,
+    imageUrl: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=600&q=80",
     emoji: "🍰"
   }
 ];
@@ -223,9 +229,19 @@ const CATEGORIES = [
   { id: "cat-dessert", name: "Tráng Miệng", emoji: "🍰" }
 ];
 
+const getBadgeClass = (tag: string): string => {
+  const t = tag.toLowerCase();
+  if (t.includes('cay')) return 'badge-danger';
+  if (t.includes('bán chạy') || t.includes('được thích') || t.includes('đặc sản')) return 'badge-primary';
+  if (t.includes('healthy') || t.includes('thanh đạm') || t.includes('khai vị') || t.includes('thanh nhiệt') || t.includes('thanh mát')) return 'badge-success';
+  return 'badge-warning';
+};
+
 export function App() {
   // Theme state & body class manager
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [wishlist, setWishlist] = useState<string[]>([]);
 
   useEffect(() => {
     if (theme === 'light') {
@@ -239,25 +255,34 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>('home');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
-  
+
   // Search & Filters
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  
+
   // Active QR Session (Flow 3.3 / 3.4)
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [tableSession, setTableSession] = useState<TableSession | null>(null);
-  
+
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
   const [dishNotes, setDishNotes] = useState("");
   const [dishQuantity, setDishQuantity] = useState(1);
-  
+  // Starbucks custom PDP states
+  const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
+  const [selectedTemperature, setSelectedTemperature] = useState<'Nóng' | 'Đá'>('Đá');
+  const [selectedSweetness, setSelectedSweetness] = useState<string>('70%');
+  const [extraToppings, setExtraToppings] = useState<{ [key: string]: number }>({
+    'Trân Châu Hoàng Kim': 0,
+    'Kem Cheese Sữa': 0,
+    'Thạch Cà Phê': 0
+  });
+
   // App Core Simulated Database States
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [placedOrders, setPlacedOrders] = useState<Order[]>([]);
   const [latestReservation, setLatestReservation] = useState<Reservation | null>(null);
-  
+
   // Reservation Form State
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
@@ -265,16 +290,16 @@ export function App() {
   const [reservationTime, setReservationTime] = useState("");
   const [reservationNote, setReservationNote] = useState("");
   const [isSubmittingReservation, setIsSubmittingReservation] = useState(false);
-  
+
   // Order Submission Status
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  
+
   // AI Assistant Chat State (Flow 3.5)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "welcome-ai",
       sender: "assistant",
-      text: "Xin chào quý khách! Tôi là Trợ Lý Ẩm Thực AI của Antigravity Bistro. Tôi có thể tư vấn món ăn ngon theo sở thích, thiết lập combo tiệc hợp túi tiền hoặc giải đáp thắc mắc về chính sách của nhà hàng. Quý khách muốn hỏi gì hôm nay ạ?",
+      text: "Xin chào quý khách! Tôi là Trợ Lý Ẩm Thực AI của TV FOOD. Tôi có thể tư vấn món ăn ngon theo sở thích, thiết lập combo tiệc hợp túi tiền hoặc giải đáp thắc mắc về chính sách của nhà hàng. Quý khách muốn hỏi gì hôm nay ạ?",
     }
   ]);
   const [aiInputValue, setAiInputValue] = useState("");
@@ -286,6 +311,16 @@ export function App() {
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const toggleWishlist = (dishId: string) => {
+    setWishlist(prev => {
+      const isFav = prev.includes(dishId);
+      const updated = isFav ? prev.filter(id => id !== dishId) : [...prev, dishId];
+      const dishName = MOCK_MENU.find(d => d.id === dishId)?.name || "món ăn";
+      triggerToast(isFav ? `💔 Đã xóa ${dishName} khỏi danh sách yêu thích.` : `❤️ Đã thêm ${dishName} vào danh sách yêu thích!`);
+      return updated;
+    });
   };
 
   // -------------------------------------------------------------
@@ -312,7 +347,7 @@ export function App() {
         let updated = false;
         const newOrders = prevOrders.map(order => {
           if (order.status === 'Served') return order;
-          
+
           let nextStatus: 'Pending' | 'Preparing' | 'Ready' | 'Served' = order.status;
           let nextItems = [...order.items];
 
@@ -389,16 +424,60 @@ export function App() {
     setSelectedDish(dish);
     setDishQuantity(1);
     setDishNotes("");
+    setSelectedSize('M');
+    setSelectedTemperature('Đá');
+    setSelectedSweetness('70%');
+    setExtraToppings({
+      'Trân Châu Hoàng Kim': 0,
+      'Kem Cheese Sữa': 0,
+      'Thạch Cà Phê': 0
+    });
   };
 
   const handleAddToCart = () => {
     if (!selectedDish) return;
-    
+
+    // Calculate final unit price including size and toppings
+    let unitPrice = selectedDish.price;
+    if (selectedSize === 'S') unitPrice -= 5000;
+    if (selectedSize === 'L') unitPrice += 10000;
+    if (selectedSize === 'XL') unitPrice += 15000;
+
+    let toppingCost = 0;
+    Object.entries(extraToppings).forEach(([name, qty]) => {
+      if (name.includes('Cheese')) toppingCost += qty * 10000;
+      else toppingCost += qty * 5000;
+    });
+    const finalPrice = unitPrice + toppingCost;
+
+    // Format full note
+    const customList: string[] = [];
+    if (selectedSize) {
+      const sizeLabel = selectedSize === 'S' ? 'Nhỏ (S)' : selectedSize === 'M' ? 'Vừa (M)' : selectedSize === 'L' ? 'Lớn (L)' : 'Khổng lồ (XL)';
+      customList.push(`Size: ${sizeLabel}`);
+    }
+    // Only show temperature/sweetness for drink categories or when customisable
+    const isDrink = selectedDish.categoryId === 'cat-drink' || selectedDish.tags.includes('thức uống') || selectedDish.tags.includes('nước uống') || selectedDish.categoryName.includes('Uống');
+    if (isDrink) {
+      customList.push(`Nhiệt độ: ${selectedTemperature}`);
+      customList.push(`Độ ngọt: ${selectedSweetness}`);
+    }
+
+    Object.entries(extraToppings).forEach(([name, qty]) => {
+      if (qty > 0) customList.push(`Thêm ${name} (x${qty})`);
+    });
+
+    if (dishNotes.trim()) {
+      customList.push(`Ghi chú: ${dishNotes}`);
+    }
+
+    const combinedNote = customList.join(' | ');
+
     setCart(prevCart => {
-      const existing = prevCart.find(item => item.menuItemId === selectedDish.id && item.note === dishNotes);
+      const existing = prevCart.find(item => item.menuItemId === selectedDish.id && item.note === combinedNote);
       if (existing) {
-        return prevCart.map(item => 
-          (item.menuItemId === selectedDish.id && item.note === dishNotes)
+        return prevCart.map(item =>
+          (item.menuItemId === selectedDish.id && item.note === combinedNote)
             ? { ...item, quantity: item.quantity + dishQuantity }
             : item
         );
@@ -406,9 +485,9 @@ export function App() {
         return [...prevCart, {
           menuItemId: selectedDish.id,
           name: selectedDish.name,
-          price: selectedDish.price,
+          price: finalPrice,
           quantity: dishQuantity,
-          note: dishNotes,
+          note: combinedNote,
           emoji: selectedDish.emoji
         }];
       }
@@ -587,16 +666,16 @@ export function App() {
 
   const handleApplySuggestedItems = (action: ChatMessage["suggestedAction"]) => {
     if (!action) return;
-    
+
     setCart(prevCart => {
       let updatedCart = [...prevCart];
-      
+
       action.items.forEach(suggested => {
         const dish = MOCK_MENU.find(d => d.id === suggested.id);
         if (dish) {
           const existing = updatedCart.find(item => item.menuItemId === dish.id && item.note === suggested.note);
           if (existing) {
-            updatedCart = updatedCart.map(item => 
+            updatedCart = updatedCart.map(item =>
               (item.menuItemId === dish.id && item.note === suggested.note)
                 ? { ...item, quantity: item.quantity + suggested.quantity }
                 : item
@@ -644,14 +723,14 @@ export function App() {
   // -------------------------------------------------------------
   const filteredMenu = MOCK_MENU.filter(dish => {
     const matchesKeyword = dish.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                           dish.description.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                           dish.tags.some(tag => tag.toLowerCase().includes(searchKeyword.toLowerCase()));
+      dish.description.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      dish.tags.some(tag => tag.toLowerCase().includes(searchKeyword.toLowerCase()));
     const matchesCategory = selectedCategory === "all" || dish.categoryId === selectedCategory;
     return matchesKeyword && matchesCategory;
   });
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {/* -------------------------------------------------------------
           TOAST ALERT BANNER (High-fidelity overlay)
           ------------------------------------------------------------- */}
@@ -681,75 +760,84 @@ export function App() {
       {/* -------------------------------------------------------------
           LEFT SIDEBAR (DESKTOP LAYOUT - screens >= 1024px)
           ------------------------------------------------------------- */}
-      <aside className="app-sidebar">
-        <div>
-          {/* Logo Header */}
-          <div className="sidebar-logo">
-            <div className="logo-icon">A</div>
-            <div>
-              <h1 className="logo-text grad-text" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.5px' }}>ANTIGRAVITY</h1>
-              <p style={{ fontSize: '0.6rem', letterSpacing: '3px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '-4px', fontWeight: 700 }}>Bistro</p>
+      <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        {/* Collapse toggle button on the right edge of sidebar */}
+        <button
+          type="button"
+          className="sidebar-collapse-toggle"
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        >
+          {isSidebarCollapsed ? '›' : '‹'}
+        </button>
+        <div className="sidebar-scroll-wrapper">
+          <div>
+            {/* Logo Header */}
+            <div className="sidebar-logo">
+              <img src="/logo.png" alt="TV FOOD" className="logo-icon" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }} />
+              <div>
+                <h1 className="logo-text grad-text" style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.5px', margin: 0 }}>TV FOOD</h1>
+              </div>
             </div>
+
+            {/* Menu Links */}
+            <nav className="sidebar-menu">
+              <button className={`sidebar-menu-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')} id="side-nav-home">
+                <Home size={18} /> <span>Trang Chủ</span>
+              </button>
+              <button className={`sidebar-menu-btn ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => { setActiveTab('menu'); setSearchKeyword(""); setSelectedCategory("all"); }} id="side-nav-menu">
+                <Utensils size={18} /> <span>Thực Đơn</span>
+              </button>
+              <button className={`sidebar-menu-btn ${activeTab === 'reservation' ? 'active' : ''}`} onClick={() => setActiveTab('reservation')} id="side-nav-book">
+                <Calendar size={18} /> <span>Đặt Bàn</span>
+              </button>
+              <button className={`sidebar-menu-btn ${activeTab === 'tracker' ? 'active' : ''}`} onClick={() => setActiveTab('tracker')} id="side-nav-tracker">
+                <Clock size={18} /> <span>Đơn Hàng</span>
+              </button>
+              <button className={`sidebar-menu-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')} id="side-nav-ai">
+                <Bot size={18} /> <span>Trợ Lý AI</span>
+              </button>
+
+              {/* Simulated Extended Links from Mockup */}
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '12px 0' }}></div>
+              <button className="sidebar-menu-btn" onClick={() => handlePromoClick('ban-chay')}>
+                <Heart size={18} /> <span>Yêu Thích</span>
+              </button>
+              <button className="sidebar-menu-btn" onClick={() => triggerToast("Tính năng Đánh Giá đang phát triển!")}>
+                <Star size={18} /> <span>Đánh Giá</span>
+              </button>
+              <button className="sidebar-menu-btn" onClick={() => triggerToast("Mã giảm giá hôm nay: ANTIGRAVITY50 - Giảm 50k!")}>
+                <Tag size={18} /> <span>Khuyến Mãi</span>
+              </button>
+              <button className="sidebar-menu-btn" onClick={() => triggerToast("Antigravity Bistro vừa lọt Top 10 nhà hàng Bistro công nghệ tốt nhất 2026!")}>
+                <Newspaper size={18} /> <span>Tin Tức</span>
+              </button>
+            </nav>
           </div>
 
-          {/* Menu Links */}
-          <nav className="sidebar-menu">
-            <button className={`sidebar-menu-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')} id="side-nav-home">
-              <Home size={18} /> <span>Trang Chủ</span>
-            </button>
-            <button className={`sidebar-menu-btn ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => { setActiveTab('menu'); setSearchKeyword(""); setSelectedCategory("all"); }} id="side-nav-menu">
-              <Utensils size={18} /> <span>Thực Đơn</span>
-            </button>
-            <button className={`sidebar-menu-btn ${activeTab === 'reservation' ? 'active' : ''}`} onClick={() => setActiveTab('reservation')} id="side-nav-book">
-              <Calendar size={18} /> <span>Đặt Bàn</span>
-            </button>
-            <button className={`sidebar-menu-btn ${activeTab === 'tracker' ? 'active' : ''}`} onClick={() => setActiveTab('tracker')} id="side-nav-tracker">
-              <Clock size={18} /> <span>Đơn Hàng</span>
-            </button>
-            <button className={`sidebar-menu-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')} id="side-nav-ai">
-              <Bot size={18} /> <span>Trợ Lý AI</span>
-            </button>
-
-            {/* Simulated Extended Links from Mockup */}
-            <div style={{ height: '1px', background: 'var(--border-color)', margin: '12px 0' }}></div>
-            <button className="sidebar-menu-btn" onClick={() => handlePromoClick('ban-chay')}>
-              <Heart size={18} /> <span>Yêu Thích</span>
-            </button>
-            <button className="sidebar-menu-btn" onClick={() => triggerToast("Tính năng Đánh Giá đang phát triển!")}>
-              <Star size={18} /> <span>Đánh Giá</span>
-            </button>
-            <button className="sidebar-menu-btn" onClick={() => triggerToast("Mã giảm giá hôm nay: ANTIGRAVITY50 - Giảm 50k!")}>
-              <Tag size={18} /> <span>Khuyến Mãi</span>
-            </button>
-            <button className="sidebar-menu-btn" onClick={() => triggerToast("Antigravity Bistro vừa lọt Top 10 nhà hàng Bistro công nghệ tốt nhất 2026!")}>
-              <Newspaper size={18} /> <span>Tin Tức</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Footer info containing user and switch */}
-        <div className="sidebar-footer">
-          {/* User profile */}
-          <div className="sidebar-profile" onClick={() => triggerToast("Khách hàng Hoàng Minh - Hạng Vàng")}>
-            <div className="sidebar-avatar">👨‍🚀</div>
-            <div className="sidebar-profile-info">
-              <div className="sidebar-profile-name">Hoàng Minh</div>
-              <div className="sidebar-profile-points">120 điểm</div>
+          {/* Footer info containing user and switch */}
+          <div className="sidebar-footer">
+            {/* User profile */}
+            <div className="sidebar-profile" onClick={() => triggerToast("Khách hàng Hoàng Minh - Hạng Vàng")}>
+              <div className="sidebar-avatar">👨‍🚀</div>
+              <div className="sidebar-profile-info">
+                <div className="sidebar-profile-name">Hoàng Minh</div>
+                <div className="sidebar-profile-points">120 điểm</div>
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>➔</div>
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>➔</div>
-          </div>
 
-          {/* Theme switcher toggle switch */}
-          <div className="sidebar-theme-row">
-            <span className="sidebar-theme-label">Chế độ tối</span>
-            <label className="theme-switch">
-              <input 
-                type="checkbox" 
-                checked={theme === 'dark'} 
-                onChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              />
-              <span className="slider-switch"></span>
-            </label>
+            {/* Theme switcher toggle switch */}
+            <div className="sidebar-theme-row">
+              <span className="sidebar-theme-label">Chế độ tối</span>
+              <label className="theme-switch">
+                <input
+                  type="checkbox"
+                  checked={theme === 'dark'}
+                  onChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                />
+                <span className="slider-switch"></span>
+              </label>
+            </div>
           </div>
         </div>
       </aside>
@@ -758,15 +846,15 @@ export function App() {
           MAIN SCROLLABLE CONTENT CONTAINER
           ------------------------------------------------------------- */}
       <div className="app-main-content">
-        
+
         {/* DESKTOP HEADER (Screens >= 1024px) */}
         <header className="desktop-header">
           {/* Search bar input with shortcut */}
           <div className="header-search-container">
             <Search size={18} className="header-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Tìm món ăn, hương vị, nguyên liệu..." 
+            <input
+              type="text"
+              placeholder="Tìm món ăn, hương vị, nguyên liệu..."
               className="header-search-input"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
@@ -784,7 +872,7 @@ export function App() {
             <button className="header-icon-btn" onClick={() => handlePromoClick('ban-chay')}>
               <Heart size={18} />
             </button>
-            
+
             {sessionToken ? (
               <button className="header-qr-btn" style={{ background: 'rgba(244, 63, 94, 0.15)', color: 'var(--danger)', boxShadow: 'none' }} onClick={handleClearSession}>
                 <ScanLine size={16} /> Thoát Bàn {tableSession?.tableNumber}
@@ -800,16 +888,15 @@ export function App() {
         {/* MOBILE TOP BAR (Screens < 1024px) */}
         <div className="mobile-top-bar">
           <div className="sidebar-logo" style={{ marginBottom: 0 }}>
-            <div className="logo-icon" style={{ width: '32px', height: '32px', fontSize: '1.1rem' }}>A</div>
+            <img src="/logo.png" alt="TV FOOD" className="logo-icon" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
             <div>
-              <h1 className="logo-text grad-text" style={{ fontSize: '1.05rem', fontWeight: 800 }}>ANTIGRAVITY</h1>
-              <p style={{ fontSize: '0.5rem', letterSpacing: '2px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '-4px' }}>Bistro</p>
+              <h1 className="logo-text grad-text" style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>TV FOOD</h1>
             </div>
           </div>
 
-          <button 
+          <button
             type="button"
-            className="theme-toggle-btn" 
+            className="theme-toggle-btn"
             style={{ width: '34px', height: '34px' }}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           >
@@ -844,67 +931,107 @@ export function App() {
 
         {/* MAIN DISPLAY AREA */}
         <main className="main-content" style={{ padding: 0 }}>
-          
+
           {/* TAB 1: HOME VIEW */}
           {activeTab === 'home' && (
             <div className="animate-fade-in">
-              {/* Redesigned Hero Banner matching mockup */}
-              <div className="hero-section" style={{ background: theme === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(16, 18, 22, 0.45)' }}>
+              {/* Redesigned Hero Banner matching mockup exactly */}
+              <div className="hero">
                 <div className="hero-content">
                   <span className="hero-subtitle">THỰC ĐƠN TRỰC TUYẾN</span>
-                  <h1 className="hero-title" style={{ fontSize: window.innerWidth < 640 ? '2.2rem' : '3.3rem', color: 'var(--text-primary)' }}>
-                    Thưởng Thức <br />Hương Vị <span className="grad-text" style={{ borderBottom: '3px solid var(--primary)', paddingBottom: '2px' }}>Độc Đáo</span>
+                  <h1 className="hero-title" style={{ fontSize: '42px', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'none', lineHeight: 1.12 }}>
+                    Thưởng Thức <br />Hương Vị <span className="highlight-underline">Độc Đáo</span>
                   </h1>
-                  <p className="hero-desc" style={{ marginTop: '16px' }}>Khám phá danh sách các món ăn tinh tế của Antigravity Bistro.</p>
-                  
-                  <div className="hero-actions" style={{ marginTop: '20px' }}>
-                    <button className="btn btn-primary" onClick={() => setActiveTab('menu')} id="btn-home-menu">
-                      <Utensils size={18} /> Xem Thực Đơn
+                  <p className="hero-desc" style={{ marginTop: '12px', fontSize: '16px', color: '#4b5563' }}>Khám phá danh sách các món ăn tinh tế của Tày food 36.</p>
+
+                  {/* Category Tabs inside Hero section as per mockup */}
+                  <div className="category-tabs">
+                    <button
+                      className={`category-tab ${selectedCategory === 'all' ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory('all'); setActiveTab('menu'); }}
+                    >
+                      <Grid size={18} /> Tất Cả Món
                     </button>
-                    <button className="btn btn-secondary" onClick={() => setActiveTab('reservation')} id="btn-home-book">
-                      <Calendar size={18} /> Đặt Bàn Ngay
+                    <button
+                      className={`category-tab ${selectedCategory === 'cat-appetizer' ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory('cat-appetizer'); setActiveTab('menu'); }}
+                    >
+                      <Leaf size={18} /> Khai Vị
+                    </button>
+                    <button
+                      className={`category-tab ${selectedCategory === 'cat-main' ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory('cat-main'); setActiveTab('menu'); }}
+                    >
+                      <Soup size={18} /> Món Chính
+                    </button>
+                    <button
+                      className={`category-tab ${selectedCategory === 'cat-hotpot' ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory('cat-hotpot'); setActiveTab('menu'); }}
+                    >
+                      <Flame size={18} /> Món Lẩu
+                    </button>
+                    <button
+                      className={`category-tab ${selectedCategory === 'cat-drink' ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory('cat-drink'); setActiveTab('menu'); }}
+                    >
+                      <CupSoda size={18} /> Đồ Uống
+                    </button>
+                    <button
+                      className={`category-tab ${selectedCategory === 'cat-dessert' ? 'active' : ''}`}
+                      onClick={() => { setSelectedCategory('cat-dessert'); setActiveTab('menu'); }}
+                    >
+                      <Cookie size={18} /> Tráng Miệng
                     </button>
                   </div>
                 </div>
-                <div className="hero-image-container">
-                  <div className="hero-circle-backdrop" style={{ width: '320px', height: '320px' }}>
-                    {/* Simulated rotating dish visual from mockup */}
-                    <span className="hero-artwork animate-float" style={{ fontSize: '9.5rem' }}>🍲</span>
-                  </div>
+                <div className="hero-image-wrap">
+                  <img
+                    src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80"
+                    alt="Antigravity Seafood Noodle"
+                    className="hero-image"
+                  />
+                  {/* Floating leaves for natural organic mockup look */}
+                  <span className="floating-leaf leaf-1">🍃</span>
+                  <span className="floating-leaf leaf-2">🌿</span>
+                  <span className="floating-leaf leaf-3">🍃</span>
                 </div>
               </div>
 
-              {/* THREE PROMO FEATURE CARDS (Redesigned matching mockup) */}
-              <div className="feature-promos-container">
-                <div className="feature-promos-row">
-                  {/* Card 1 */}
-                  <div className="feature-promo-card promo-cay" onClick={() => handlePromoClick('cay')}>
-                    <div className="feature-promo-info">
-                      <h3 className="feature-promo-title">Món Cay 🌶️</h3>
-                      <p className="feature-promo-desc">Hương vị đậm đà, kích thích vị giác</p>
-                      <button className="feature-promo-btn">Khám phá ➔</button>
-                    </div>
-                    <div className="feature-promo-visual">🍜</div>
+              {/* THREE PROMO FEATURE CARDS (Redesigned matching mockup exactly) */}
+              <div className="promo-grid">
+                {/* Card 1 */}
+                <div className="promo-card promo-cay" onClick={() => { setSelectedCategory('cat-hotpot'); setActiveTab('menu'); }}>
+                  <div className="promo-content">
+                    <h3 className="feature-promo-title" style={{ fontSize: '22px', fontWeight: 800, color: '#ff4d1c', marginBottom: '6px' }}>Món Cay 🌶️</h3>
+                    <p className="feature-promo-desc" style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.5, marginBottom: '16px' }}>Hương vị đậm đà, kích thích vị giác</p>
+                    <button className="feature-promo-btn">Khám phá →</button>
                   </div>
-
-                  {/* Card 2 */}
-                  <div className="feature-promo-card promo-khai-vi" onClick={() => handlePromoClick('khai-vi')}>
-                    <div className="feature-promo-info">
-                      <h3 className="feature-promo-title">Khai Vị Tươi Ngon 🥬</h3>
-                      <p className="feature-promo-desc">Món mở đầu hoàn hảo cho bữa ăn</p>
-                      <button className="feature-promo-btn">Khám phá ➔</button>
-                    </div>
-                    <div className="feature-promo-visual">🥗</div>
+                  <div className="promo-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=600&q=80" alt="Món Cay" className="promo-image" />
                   </div>
+                </div>
 
-                  {/* Card 3 */}
-                  <div className="feature-promo-card promo-yeu-thich" onClick={() => handlePromoClick('ban-chay')}>
-                    <div className="feature-promo-info">
-                      <h3 className="feature-promo-title">Món Được Thích ❤️</h3>
-                      <p className="feature-promo-desc">Thực khách đánh giá và bình chọn cao</p>
-                      <button className="feature-promo-btn">Xem ngay ➔</button>
-                    </div>
-                    <div className="feature-promo-visual">🍹</div>
+                {/* Card 2 */}
+                <div className="promo-card promo-khai-vi" onClick={() => { setSelectedCategory('cat-appetizer'); setActiveTab('menu'); }}>
+                  <div className="promo-content">
+                    <h3 className="feature-promo-title" style={{ fontSize: '22px', fontWeight: 800, color: '#8b5cf6', marginBottom: '6px' }}>Khai Vị Tươi Ngon 🥬</h3>
+                    <p className="feature-promo-desc" style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.5, marginBottom: '16px' }}>Món mở đầu hoàn hảo cho bữa ăn</p>
+                    <button className="feature-promo-btn">Khám phá →</button>
+                  </div>
+                  <div className="promo-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80" alt="Khai Vị" className="promo-image" />
+                  </div>
+                </div>
+
+                {/* Card 3 */}
+                <div className="promo-card promo-yeu-thich" onClick={() => { setSelectedCategory('cat-drink'); setActiveTab('menu'); }}>
+                  <div className="promo-content">
+                    <h3 className="feature-promo-title" style={{ fontSize: '22px', fontWeight: 800, color: '#10b981', marginBottom: '6px' }}>Món Được Yêu Thích ❤️</h3>
+                    <p className="feature-promo-desc" style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.5, marginBottom: '16px' }}>Những món ăn được thực khách bình chọn nhiều nhất</p>
+                    <button className="feature-promo-btn">Xem ngay →</button>
+                  </div>
+                  <div className="promo-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80" alt="Được Yêu Thích" className="promo-image" />
                   </div>
                 </div>
               </div>
@@ -915,10 +1042,10 @@ export function App() {
                   <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     Món Nổi Bật <span style={{ color: 'var(--primary)' }}>🔥</span>
                   </h2>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '2px' }}>Những món ăn được yêu thích nhất tại Antigravity Bistro.</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '2px' }}>Những món ăn được yêu thích nhất tại TV FOOD.</p>
                 </div>
-                <button 
-                  className="btn btn-secondary" 
+                <button
+                  className="btn btn-secondary"
                   style={{ padding: '8px 16px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '20px' }}
                   onClick={() => { setActiveTab('menu'); setSearchKeyword(""); setSelectedCategory("all"); }}
                 >
@@ -927,32 +1054,47 @@ export function App() {
               </div>
 
               <div className="dishes-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                {MOCK_MENU.filter(d => d.tags.includes('nổi bật') || d.tags.includes('bán chạy')).slice(0, 5).map(dish => (
-                  <div 
-                    key={dish.id} 
+                {[
+                  MOCK_MENU.find(d => d.id === "dish-001"),
+                  MOCK_MENU.find(d => d.id === "dish-002"),
+                  MOCK_MENU.find(d => d.id === "dish-003"),
+                  MOCK_MENU.find(d => d.id === "dish-007"),
+                  MOCK_MENU.find(d => d.id === "dish-009")
+                ].filter((d): d is MenuItem => !!d).map(dish => (
+                  <div
+                    key={dish.id}
                     className="glass-panel dish-card"
                     onClick={() => handleOpenDishModal(dish)}
-                    style={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer' }}
+                    style={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', overflow: 'hidden' }}
                   >
-                    <div className="dish-image-wrapper" style={{ height: '160px' }}>
-                      <div className="dish-image-placeholder" style={{ fontSize: '4.5rem' }}>{dish.emoji}</div>
-                      <div className="dish-badge-container">
-                        <span className="badge badge-primary" style={{ background: dish.tags.includes('cay') ? 'var(--danger)' : 'var(--primary)' }}>
-                          {dish.tags.includes('cay') ? 'Cay 🌶️' : (dish.tags.includes('bán chạy') ? 'Bán Chạy' : 'Nổi Bật')}
-                        </span>
-                      </div>
+                    <div className="dish-image-wrapper" style={{ height: '160px', overflow: 'hidden', position: 'relative' }}>
+                      {dish.imageUrl ? (
+                        <img src={dish.imageUrl} alt={dish.name} className="dish-card-img" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div className="dish-image-placeholder" style={{ fontSize: '4.5rem' }}>{dish.emoji}</div>
+                      )}
                     </div>
-                    <div className="dish-details" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div className="dish-details" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px' }}>
                       <div>
-                        <div className="dish-category" style={{ fontSize: '0.75rem' }}>{dish.categoryName}</div>
-                        <h3 className="dish-title" style={{ fontSize: '1.05rem', margin: '4px 0' }}>{dish.name}</h3>
-                        <p className="dish-desc" style={{ fontSize: '0.78rem', lineClamp: 2, WebkitLineClamp: 2 }}>{dish.description}</p>
-                      </div>
-                      <div className="dish-footer" style={{ marginTop: '12px' }}>
-                        <span className="dish-price" style={{ fontSize: '1.1rem', fontWeight: 800 }}>{dish.price.toLocaleString('vi-VN')} đ</span>
-                        <div className="dish-btn-add" style={{ width: '32px', height: '32px' }} onClick={(e) => { e.stopPropagation(); handleOpenDishModal(dish); }}>
-                          <Plus size={16} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                          <span className="dish-category" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{dish.categoryName}</span>
+                          <span className={`badge ${getBadgeClass(dish.tags[0])}`} style={{ textTransform: 'capitalize', fontWeight: 700, fontSize: '0.68rem', padding: '3px 8px', borderRadius: '6px' }}>
+                            {dish.tags[0]}
+                          </span>
                         </div>
+                        <h3 className="dish-title" style={{ fontSize: '1.05rem', margin: '4px 0', fontWeight: 750, color: 'var(--text-primary)' }}>{dish.name}</h3>
+                        <p className="dish-desc" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineClamp: 2, WebkitLineClamp: 2 }}>{dish.description}</p>
+                      </div>
+                      <div className="dish-footer" style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="dish-price" style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{dish.price.toLocaleString('vi-VN')} đ</span>
+                        <button
+                          type="button"
+                          className={`wishlist-toggle-btn ${wishlist.includes(dish.id) ? 'active' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); toggleWishlist(dish.id); }}
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface)' }}
+                        >
+                          <Heart size={16} fill={wishlist.includes(dish.id) ? 'var(--danger)' : 'transparent'} color={wishlist.includes(dish.id) ? 'var(--danger)' : 'var(--text-muted)'} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -970,9 +1112,9 @@ export function App() {
                 </div>
                 <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Thưởng Thức Hương Vị Độc Đáo</h2>
                 <p style={{ color: 'var(--text-secondary)' }}>
-                  {sessionToken 
-                    ? `Quý khách đang ở BÀN ${tableSession?.tableNumber}. Thêm món vào giỏ và đặt hàng ngay!` 
-                    : "Khám phá danh sách các món ăn tinh tế của Antigravity Bistro."
+                  {sessionToken
+                    ? `Quý khách đang ở BÀN ${tableSession?.tableNumber}. Thêm món vào giỏ và đặt hàng ngay!`
+                    : "Khám phá danh sách các món ăn tinh tế của TV FOOD."
                   }
                 </p>
               </div>
@@ -981,9 +1123,9 @@ export function App() {
               <div className="menu-search-bar" style={{ display: window.innerWidth < 1024 ? 'block' : 'none' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                   <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="Tìm tên món ăn, hương vị, nguyên liệu..." 
+                  <input
+                    type="text"
+                    placeholder="Tìm tên món ăn, hương vị, nguyên liệu..."
                     className="form-control"
                     style={{ paddingLeft: '48px' }}
                     value={searchKeyword}
@@ -996,8 +1138,8 @@ export function App() {
               {/* Category tabs */}
               <div className="category-tabs-container">
                 {CATEGORIES.map(cat => (
-                  <button 
-                    key={cat.id} 
+                  <button
+                    key={cat.id}
                     className={`category-tab ${selectedCategory === cat.id ? 'active' : ''}`}
                     onClick={() => setSelectedCategory(cat.id)}
                     id={`cat-btn-${cat.id}`}
@@ -1020,34 +1162,46 @@ export function App() {
               ) : (
                 <div className="dishes-grid">
                   {filteredMenu.map(dish => (
-                    <div 
-                      key={dish.id} 
+                    <div
+                      key={dish.id}
                       className={`glass-panel dish-card ${!dish.isAvailable ? 'out-of-stock' : ''}`}
                       onClick={() => handleOpenDishModal(dish)}
                       id={`dish-card-${dish.id}`}
+                      style={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', overflow: 'hidden' }}
                     >
-                      <div className="dish-image-wrapper">
-                        <div className="dish-image-placeholder">{dish.emoji}</div>
-                        <div className="dish-badge-container">
-                          {dish.tags.map((tag, idx) => (
-                            <span key={idx} className="badge badge-primary">{tag}</span>
-                          ))}
-                          {!dish.isAvailable && (
-                            <span className="badge badge-danger">Hết Món</span>
-                          )}
-                        </div>
+                      <div className="dish-image-wrapper" style={{ height: '160px', overflow: 'hidden', position: 'relative' }}>
+                        {dish.imageUrl ? (
+                          <img src={dish.imageUrl} alt={dish.name} className="dish-card-img" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div className="dish-image-placeholder">{dish.emoji}</div>
+                        )}
                       </div>
-                      <div className="dish-details">
-                        <div className="dish-category">{dish.categoryName}</div>
-                        <h3 className="dish-title">{dish.name}</h3>
-                        <p className="dish-desc">{dish.description}</p>
-                        <div className="dish-footer">
-                          <span className="dish-price">{dish.price.toLocaleString('vi-VN')} ₫</span>
-                          {dish.isAvailable && (
-                            <div className="dish-btn-add">
-                              <Plus size={18} />
+                      <div className="dish-details" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '16px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                            <span className="dish-category" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{dish.categoryName}</span>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              {dish.tags.map((tag, idx) => (
+                                <span key={idx} className={`badge ${getBadgeClass(tag)}`} style={{ textTransform: 'capitalize', fontWeight: 700, fontSize: '0.68rem', padding: '3px 8px', borderRadius: '6px' }}>{tag}</span>
+                              ))}
+                              {!dish.isAvailable && (
+                                <span className="badge badge-danger" style={{ fontWeight: 700, fontSize: '0.68rem', padding: '3px 8px', borderRadius: '6px' }}>Hết Món</span>
+                              )}
                             </div>
-                          )}
+                          </div>
+                          <h3 className="dish-title" style={{ fontSize: '1.05rem', margin: '4px 0', fontWeight: 750, color: 'var(--text-primary)' }}>{dish.name}</h3>
+                          <p className="dish-desc" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineClamp: 2, WebkitLineClamp: 2 }}>{dish.description}</p>
+                        </div>
+                        <div className="dish-footer" style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="dish-price" style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{dish.price.toLocaleString('vi-VN')} ₫</span>
+                          <button
+                            type="button"
+                            className={`wishlist-toggle-btn ${wishlist.includes(dish.id) ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); toggleWishlist(dish.id); }}
+                            style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface)' }}
+                          >
+                            <Heart size={16} fill={wishlist.includes(dish.id) ? 'var(--danger)' : 'transparent'} color={wishlist.includes(dish.id) ? 'var(--danger)' : 'var(--text-muted)'} />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1123,8 +1277,8 @@ export function App() {
                     💡 <strong>Hướng dẫn đến nhà hàng:</strong> Quý khách vui lòng đến trước giờ hẹn 10-15 phút. Đặt bàn sẽ tự động lưu giữ tối đa 30 phút sau giờ đặt hẹn.
                   </div>
 
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     style={{ width: '100%', marginTop: '24px' }}
                     onClick={() => setLatestReservation(null)}
                     id="btn-book-another"
@@ -1138,12 +1292,12 @@ export function App() {
                     <label className="form-label" htmlFor="res-name">Họ và Tên Khách Hàng *</label>
                     <div style={{ position: 'relative' }}>
                       <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <input 
-                        type="text" 
-                        id="res-name" 
-                        className="form-control" 
+                      <input
+                        type="text"
+                        id="res-name"
+                        className="form-control"
                         style={{ paddingLeft: '44px' }}
-                        placeholder="Nguyễn Văn A" 
+                        placeholder="Nguyễn Văn A"
                         required
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
@@ -1156,12 +1310,12 @@ export function App() {
                       <label className="form-label" htmlFor="res-phone">Số Điện Thoại Liên Hệ *</label>
                       <div style={{ position: 'relative' }}>
                         <Phone size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input 
-                          type="tel" 
-                          id="res-phone" 
-                          className="form-control" 
+                        <input
+                          type="tel"
+                          id="res-phone"
+                          className="form-control"
                           style={{ paddingLeft: '44px' }}
-                          placeholder="0987654321" 
+                          placeholder="0987654321"
                           required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
@@ -1173,8 +1327,8 @@ export function App() {
                       <label className="form-label" htmlFor="res-guests">Số Lượng Khách Đi *</label>
                       <div style={{ position: 'relative' }}>
                         <Users size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <select 
-                          id="res-guests" 
+                        <select
+                          id="res-guests"
                           className="form-control"
                           style={{ paddingLeft: '44px', appearance: 'none' }}
                           value={guestCount}
@@ -1193,10 +1347,10 @@ export function App() {
 
                   <div className="form-group">
                     <label className="form-label" htmlFor="res-time">Thời Gian Nhận Bàn *</label>
-                    <input 
-                      type="datetime-local" 
-                      id="res-time" 
-                      className="form-control" 
+                    <input
+                      type="datetime-local"
+                      id="res-time"
+                      className="form-control"
                       required
                       value={reservationTime}
                       onChange={(e) => setReservationTime(e.target.value)}
@@ -1205,18 +1359,18 @@ export function App() {
 
                   <div className="form-group">
                     <label className="form-label" htmlFor="res-note">Ghi Chú Đặc Biệt</label>
-                    <textarea 
-                      id="res-note" 
-                      className="form-control" 
+                    <textarea
+                      id="res-note"
+                      className="form-control"
                       placeholder="Ví dụ: Cần bàn sát cửa sổ, có trẻ em sơ sinh cần ghế trẻ em, hoặc tổ chức kỷ niệm ngày cưới..."
                       value={reservationNote}
                       onChange={(e) => setReservationNote(e.target.value)}
                     ></textarea>
                   </div>
 
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
                     style={{ width: '100%', marginTop: '10px' }}
                     disabled={isSubmittingReservation}
                     id="btn-submit-reservation"
@@ -1252,9 +1406,9 @@ export function App() {
                   <p style={{ fontSize: '0.9rem', marginTop: '4px', maxWidth: '340px', marginInline: 'auto' }}>
                     Quý khách vui lòng quét mã QR tại bàn, chọn món ngon từ thực đơn để gửi đơn gọi món.
                   </p>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ marginTop: '24px' }} 
+                  <button
+                    className="btn btn-primary"
+                    style={{ marginTop: '24px' }}
                     onClick={() => setActiveTab('menu')}
                   >
                     Xem Thực Đơn Gọi Món
@@ -1277,10 +1431,9 @@ export function App() {
                     </div>
 
                     <div className="tracker-status-box">
-                      <div className={`tracker-status-step ${
-                        order.status === 'Pending' ? 'active' : 
-                        (order.status === 'Preparing' || order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
-                      }`}>
+                      <div className={`tracker-status-step ${order.status === 'Pending' ? 'active' :
+                          (order.status === 'Preparing' || order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
+                        }`}>
                         <div className="tracker-step-icon-container">1</div>
                         <div>
                           <h4 className="tracker-step-title">Gửi Đơn & Chờ Nhận</h4>
@@ -1288,10 +1441,9 @@ export function App() {
                         </div>
                       </div>
 
-                      <div className={`tracker-status-step ${
-                        order.status === 'Preparing' ? 'active' : 
-                        (order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
-                      }`}>
+                      <div className={`tracker-status-step ${order.status === 'Preparing' ? 'active' :
+                          (order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
+                        }`}>
                         <div className="tracker-step-icon-container">2</div>
                         <div>
                           <h4 className="tracker-step-title">Đang Chuẩn Bị (Preparing)</h4>
@@ -1299,10 +1451,9 @@ export function App() {
                         </div>
                       </div>
 
-                      <div className={`tracker-status-step ${
-                        order.status === 'Ready' ? 'active' : 
-                        (order.status === 'Served') ? 'completed' : ''
-                      }`}>
+                      <div className={`tracker-status-step ${order.status === 'Ready' ? 'active' :
+                          (order.status === 'Served') ? 'completed' : ''
+                        }`}>
                         <div className="tracker-step-icon-container">3</div>
                         <div>
                           <h4 className="tracker-step-title">Đã Sẵn Sàng (Ready)</h4>
@@ -1353,7 +1504,7 @@ export function App() {
               <div className="ai-header-info">
                 <div className="ai-avatar">🤖</div>
                 <div>
-                  <h3 className="ai-title-text">Trợ Lý Khẩu Vị AI - Antigravity</h3>
+                  <h3 className="ai-title-text">Trợ Lý Khẩu Vị AI - TV FOOD</h3>
                   <div className="ai-status-pulse">
                     <span className="session-indicator"></span>
                     <span>Đang Trực Tuyến | AI RAG Pipeline</span>
@@ -1365,7 +1516,7 @@ export function App() {
                 {chatMessages.map(msg => (
                   <div key={msg.id} className={`ai-chat-bubble ${msg.sender}`}>
                     <div style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
-                    
+
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="ai-sources-row">
                         <span>Dẫn nguồn RAG:</span>
@@ -1377,8 +1528,8 @@ export function App() {
 
                     {msg.suggestedAction && (
                       <div className="ai-suggested-actions">
-                        <button 
-                          className="btn btn-primary btn-outline" 
+                        <button
+                          className="btn btn-primary btn-outline"
                           style={{ fontSize: '0.82rem', padding: '8px 16px', background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)', borderColor: 'var(--primary)' }}
                           onClick={() => handleApplySuggestedItems(msg.suggestedAction)}
                         >
@@ -1388,7 +1539,7 @@ export function App() {
                     )}
                   </div>
                 ))}
-                
+
                 {isAiTyping && (
                   <div className="ai-chat-bubble assistant" style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '12px 20px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-secondary)', animation: 'bounce 1s infinite' }}></div>
@@ -1401,19 +1552,19 @@ export function App() {
               <div className="ai-suggestions-grid" style={{ marginTop: '16px' }}>
                 <div className="ai-suggestions-label">Câu Hỏi Ý Kiến Gợi Ý:</div>
                 <div className="ai-suggestion-pills">
-                  <button 
+                  <button
                     className="ai-suggestion-pill"
                     onClick={() => handleSendAiMessage("Đi 4 người khoảng 600k nên gọi combo món gì hợp lý?")}
                   >
                     Combo 4 người 600k?
                   </button>
-                  <button 
+                  <button
                     className="ai-suggestion-pill"
                     onClick={() => handleSendAiMessage("Thực đơn có những món nào ngon không cay cho trẻ em?")}
                   >
                     Món trẻ em không cay?
                   </button>
-                  <button 
+                  <button
                     className="ai-suggestion-pill"
                     onClick={() => handleSendAiMessage("Nhà hàng mình có tùy chọn món ăn chay không?")}
                   >
@@ -1423,9 +1574,9 @@ export function App() {
               </div>
 
               <div className="ai-input-row">
-                <input 
-                  type="text" 
-                  placeholder="Hỏi về món ăn, giá cả, hoặc đặt combo..." 
+                <input
+                  type="text"
+                  placeholder="Hỏi về món ăn, giá cả, hoặc đặt combo..."
                   className="form-control"
                   value={aiInputValue}
                   onChange={(e) => setAiInputValue(e.target.value)}
@@ -1433,7 +1584,7 @@ export function App() {
                   disabled={isAiTyping}
                   id="ai-chat-input"
                 />
-                <button 
+                <button
                   className="btn btn-primary"
                   onClick={() => handleSendAiMessage()}
                   disabled={isAiTyping || !aiInputValue.trim()}
@@ -1477,81 +1628,259 @@ export function App() {
       {/* -------------------------------------------------------------
           DISH DETAILS MODAL POPUP
           ------------------------------------------------------------- */}
-      {selectedDish && (
-        <div className="modal-backdrop animate-fade-in" onClick={() => setSelectedDish(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={() => setSelectedDish(null)}>
-              <X size={20} />
-            </button>
-            <div className="modal-hero-image">
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface-elevated)', fontSize: '7rem' }}>
-                {selectedDish.emoji}
-              </div>
-            </div>
-            <div className="modal-body">
-              <div className="modal-title-row">
-                <div>
-                  <span className="dish-category" style={{ fontSize: '0.8rem' }}>{selectedDish.categoryName}</span>
-                  <h3 style={{ fontSize: '1.5rem', marginTop: '4px' }}>{selectedDish.name}</h3>
-                </div>
-                <div className="modal-price">{selectedDish.price.toLocaleString('vi-VN')} ₫</div>
-              </div>
+      {/* -------------------------------------------------------------
+          DISH DETAILS MODAL POPUP
+          ------------------------------------------------------------- */}
+      {selectedDish && (() => {
+        const isDrink = selectedDish.categoryId === 'cat-drink' || selectedDish.tags.includes('thức uống') || selectedDish.tags.includes('nước uống') || selectedDish.categoryName.includes('Uống');
 
-              <div className="modal-tags">
-                {selectedDish.tags.map((tag, idx) => (
-                  <span key={idx} className="badge badge-primary">{tag}</span>
-                ))}
-              </div>
+        let modalUnitPrice = selectedDish.price;
+        if (selectedSize === 'S') modalUnitPrice -= 5000;
+        if (selectedSize === 'L') modalUnitPrice += 10000;
+        if (selectedSize === 'XL') modalUnitPrice += 15000;
 
-              <p className="modal-desc">{selectedDish.description}</p>
+        let toppingCost = 0;
+        Object.entries(extraToppings).forEach(([name, qty]) => {
+          if (name.includes('Cheese')) toppingCost += qty * 10000;
+          else toppingCost += qty * 5000;
+        });
+        const currentDishPrice = modalUnitPrice + toppingCost;
 
-              <div className="modal-notes-section">
-                <label className="form-label" htmlFor="dish-modal-notes" style={{ color: 'var(--primary)', fontWeight: 650, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>💡</span> Hướng Dẫn/Ghi Chú Nấu Món:
-                </label>
-                <input 
-                  type="text" 
-                  id="dish-modal-notes" 
-                  className="form-control" 
-                  placeholder="Ví dụ: Ít cay, không bỏ hành tây, lấy thêm chanh..."
-                  value={dishNotes}
-                  onChange={(e) => setDishNotes(e.target.value)}
-                />
-              </div>
-
-              <div className="modal-quantity-row">
-                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Chọn số lượng suất:</span>
-                <div className="quantity-picker">
-                  <button 
-                    type="button" 
-                    className="quantity-btn"
-                    onClick={() => setDishQuantity(q => Math.max(1, q - 1))}
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span className="quantity-value">{dishQuantity}</span>
-                  <button 
-                    type="button" 
-                    className="quantity-btn"
-                    onClick={() => setDishQuantity(q => q + 1)}
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <button 
-                type="button" 
-                className="btn btn-primary modal-btn-submit"
-                onClick={handleAddToCart}
-                id="btn-modal-add-to-cart"
-              >
-                Thêm Vào Giỏ Hàng - {(selectedDish.price * dishQuantity).toLocaleString('vi-VN')} ₫
+        return (
+          <div className="modal-backdrop animate-fade-in" onClick={() => setSelectedDish(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+              <button className="modal-close-btn" onClick={() => setSelectedDish(null)}>
+                <X size={20} />
               </button>
+              <div className="modal-hero-image">
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface-elevated)', fontSize: '7rem' }}>
+                  {selectedDish.emoji}
+                </div>
+              </div>
+
+              <div className="modal-body">
+                <div className="modal-title-row">
+                  <div>
+                    <span className="dish-category" style={{ fontSize: '0.8rem' }}>{selectedDish.categoryName}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{selectedDish.name}</h3>
+                      <span className="starbucks-reward-badge" title="Đạt tiêu chuẩn đổi bằng sao Rewards">150★</span>
+                    </div>
+                  </div>
+                  <div className="modal-price" style={{ color: 'var(--price-color)', fontFamily: 'var(--font-heading)', fontWeight: 850, fontSize: '1.6rem' }}>
+                    {currentDishPrice.toLocaleString('vi-VN')} ₫
+                  </div>
+                </div>
+
+                <div className="modal-tags">
+                  {selectedDish.tags.map((tag, idx) => (
+                    <span key={idx} className={`badge ${getBadgeClass(tag)}`}>{tag}</span>
+                  ))}
+                </div>
+
+                <p className="modal-desc" style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: '1.5', marginBottom: '20px' }}>
+                  {selectedDish.description}
+                </p>
+
+                {/* 1. Size Options Selector (Starbucks style PDP) */}
+                <div className="pdp-section" style={{ marginBottom: '24px' }}>
+                  <label className="pdp-section-label" style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    📐 Chọn Kích Cỡ (Size):
+                  </label>
+                  <div className="size-selector-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                    {[
+                      { key: 'S', name: 'S (Nhỏ)', size: '12 fl oz', offset: '-5k' },
+                      { key: 'M', name: 'M (Grande)', size: '16 fl oz', offset: 'Chuẩn' },
+                      { key: 'L', name: 'L (Venti)', size: '24 fl oz', offset: '+10k' },
+                      { key: 'XL', name: 'XL (Trenta)', size: '31 fl oz', offset: '+15k' }
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        className={`size-option-btn ${selectedSize === item.key ? 'active' : ''}`}
+                        onClick={() => setSelectedSize(item.key as any)}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          padding: '12px 8px',
+                          border: selectedSize === item.key ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          borderRadius: '12px',
+                          background: selectedSize === item.key ? 'rgba(var(--primary-rgb), 0.08)' : 'var(--bg-surface)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          transform: selectedSize === item.key ? 'scale(1.02)' : 'none'
+                        }}
+                      >
+                        <span style={{ fontSize: item.key === 'S' ? '1.1rem' : item.key === 'M' ? '1.3rem' : item.key === 'L' ? '1.5rem' : '1.7rem', marginBottom: '4px' }}>☕</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.name}</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{item.size}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--primary)', marginTop: '4px' }}>{item.offset}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Hot/Ice and Sweetness Options for drinks */}
+                {isDrink && (
+                  <div className="pdp-section" style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label className="pdp-section-label" style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        ❄️ Nhiệt Độ:
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {[
+                          { key: 'Đá', label: 'Lạnh (Đá) ❄️' },
+                          { key: 'Nóng', label: 'Nóng ☕' }
+                        ].map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            className={`custom-pill-btn ${selectedTemperature === item.key ? 'active' : ''}`}
+                            onClick={() => setSelectedTemperature(item.key as any)}
+                            style={{
+                              flex: 1,
+                              padding: '10px 8px',
+                              borderRadius: '30px',
+                              border: selectedTemperature === item.key ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                              background: selectedTemperature === item.key ? 'rgba(var(--primary-rgb), 0.08)' : 'var(--bg-surface)',
+                              color: selectedTemperature === item.key ? 'var(--primary)' : 'var(--text-primary)',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="pdp-section-label" style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        🍯 Độ Ngọt:
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        {['Không đường', '50%', '70% (Chuẩn)', '100%'].map((lvl) => (
+                          <button
+                            key={lvl}
+                            type="button"
+                            className={`custom-pill-btn ${selectedSweetness === lvl ? 'active' : ''}`}
+                            onClick={() => setSelectedSweetness(lvl)}
+                            style={{
+                              padding: '6px 4px',
+                              borderRadius: '30px',
+                              border: selectedSweetness === lvl ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                              background: selectedSweetness === lvl ? 'rgba(var(--primary-rgb), 0.08)' : 'var(--bg-surface)',
+                              color: selectedSweetness === lvl ? 'var(--primary)' : 'var(--text-primary)',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Add-ins & Extra Toppings Row */}
+                <div className="pdp-section" style={{ marginBottom: '24px' }}>
+                  <label className="pdp-section-label" style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    ✨ Thêm Topping Thượng Hạng:
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(var(--primary-rgb), 0.03)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
+                    {Object.keys(extraToppings).map((toppingName) => {
+                      const qty = extraToppings[toppingName];
+                      const cost = toppingName.includes('Cheese') ? 10000 : 5000;
+                      return (
+                        <div key={toppingName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ textAlign: 'left' }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>{toppingName}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>+{cost.toLocaleString('vi-VN')} ₫</span>
+                          </div>
+
+                          <div className="quantity-picker" style={{ height: '36px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)' }}>
+                            <button
+                              type="button"
+                              className="quantity-btn"
+                              style={{ width: '32px', height: '32px' }}
+                              onClick={() => setExtraToppings(prev => ({ ...prev, [toppingName]: Math.max(0, qty - 1) }))}
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span className="quantity-value" style={{ width: '28px', fontSize: '0.85rem' }}>{qty}</span>
+                            <button
+                              type="button"
+                              className="quantity-btn"
+                              style={{ width: '32px', height: '32px' }}
+                              onClick={() => setExtraToppings(prev => ({ ...prev, [toppingName]: qty + 1 }))}
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Notes section */}
+                <div className="modal-notes-section" style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
+                  <label className="form-label" htmlFor="dish-modal-notes" style={{ color: 'var(--primary)', fontWeight: 650, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '0.88rem' }}>
+                    <span>💡</span> Hướng Dẫn/Ghi Chú Nấu Món:
+                  </label>
+                  <input
+                    type="text"
+                    id="dish-modal-notes"
+                    className="form-control"
+                    placeholder="Ví dụ: Ít đá, không hành tây, lấy thêm chanh..."
+                    value={dishNotes}
+                    onChange={(e) => setDishNotes(e.target.value)}
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+
+                {/* 5. Quantity Stepper & Add Button */}
+                <div className="modal-quantity-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Chọn số lượng suất:</span>
+                  <div className="quantity-picker" style={{ border: '1px solid var(--border-color)', background: 'var(--bg-deep)' }}>
+                    <button
+                      type="button"
+                      className="quantity-btn"
+                      onClick={() => setDishQuantity(q => Math.max(1, q - 1))}
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="quantity-value">{dishQuantity}</span>
+                    <button
+                      type="button"
+                      className="quantity-btn"
+                      onClick={() => setDishQuantity(q => q + 1)}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary modal-btn-submit"
+                  onClick={handleAddToCart}
+                  id="btn-modal-add-to-cart"
+                  style={{ width: '100%', padding: '16px 20px', fontSize: '1.05rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                >
+                  Thêm Vào Giỏ Hàng - {(currentDishPrice * dishQuantity).toLocaleString('vi-VN')} ₫
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* -------------------------------------------------------------
           FLOATING STICKY CART BADGE ACTION
@@ -1598,17 +1927,17 @@ export function App() {
                       </div>
                       <div className="cart-item-row">
                         <span className="cart-item-price">{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</span>
-                        
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div className="cart-item-quantity-picker">
-                            <button 
+                            <button
                               className="cart-item-qty-btn"
                               onClick={() => handleUpdateCartQty(item.menuItemId, item.note, -1)}
                             >
                               <Minus size={12} />
                             </button>
                             <span className="cart-item-qty-val">{item.quantity}</span>
-                            <button 
+                            <button
                               className="cart-item-qty-btn"
                               onClick={() => handleUpdateCartQty(item.menuItemId, item.note, 1)}
                             >
@@ -1616,7 +1945,7 @@ export function App() {
                             </button>
                           </div>
 
-                          <button 
+                          <button
                             className="cart-item-btn-remove"
                             onClick={() => handleRemoveFromCart(item.menuItemId, item.note)}
                           >
@@ -1637,8 +1966,8 @@ export function App() {
                   <span className="cart-summary-total">{getCartTotal().toLocaleString('vi-VN')} ₫</span>
                 </div>
 
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   style={{ width: '100%' }}
                   onClick={handleSubmitOrder}
                   disabled={isSubmittingOrder}

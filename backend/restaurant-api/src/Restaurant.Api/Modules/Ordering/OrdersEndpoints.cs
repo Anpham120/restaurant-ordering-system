@@ -45,7 +45,8 @@ public static class OrdersEndpoints
             return Error(result.StatusCode, result.ErrorCode!, result.ErrorMessage!, httpContext.TraceIdentifier);
         }
 
-        await hubContext.Clients.All.SendAsync("NewOrderCreated", result.Event, cancellationToken);
+        await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
+            .SendAsync("NewOrderCreated", result.Event, cancellationToken);
 
         return result.StatusCode == StatusCodes.Status201Created
             ? TypedResults.Created($"/api/v1/orders/{result.Response!.Id}", new ApiResponse<OrderResponse>(true, result.Response))

@@ -53,7 +53,8 @@ public static class KitchenEndpoints
 
         if (eventName is not null)
         {
-            await hubContext.Clients.All.SendAsync(eventName, result.Event, cancellationToken);
+            await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
+                .SendAsync(eventName, result.Event, cancellationToken);
         }
 
         return TypedResults.Ok(new ApiResponse<KitchenOrderItemResponse>(true, result.Response!));

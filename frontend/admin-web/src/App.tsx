@@ -144,6 +144,7 @@ function App() {
 
   // Realtime banner warning state
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
+  const connectionRef = React.useRef<{ stop: () => void; reconnect: () => void } | null>(null);
 
   const mapKitchenOrderItem = (item: KitchenOrderItemDto): OrderItem => ({
     id: item.id,
@@ -180,10 +181,24 @@ function App() {
   const connectRestaurantHub = useCallback(() => {
     let socket: WebSocket | null = null;
     let isStopped = false;
+    let reconnectTimer: number | undefined;
     const realtimeEvents = new Set(['NewOrderCreated', 'OrderItemPreparing', 'OrderItemReady', 'OrderItemServed']);
+
+    const scheduleReconnect = () => {
+      if (isStopped || reconnectTimer !== undefined) return;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = undefined;
+        void start();
+      }, 5000);
+    };
 
     const start = async () => {
       try {
+        if (reconnectTimer !== undefined) {
+          window.clearTimeout(reconnectTimer);
+          reconnectTimer = undefined;
+        }
+
         const negotiateResponse = await fetch(`${API_BASE_URL}/hubs/restaurant/negotiate?negotiateVersion=1`, {
           method: 'POST'
         });
@@ -212,11 +227,11 @@ function App() {
         socket.onerror = () => setIsRealtimeConnected(false);
         socket.onclose = () => {
           setIsRealtimeConnected(false);
-          if (!isStopped) window.setTimeout(start, 5000);
+          scheduleReconnect();
         };
       } catch {
         setIsRealtimeConnected(false);
-        if (!isStopped) window.setTimeout(start, 5000);
+        scheduleReconnect();
       }
     };
 
@@ -225,7 +240,16 @@ function App() {
     return {
       stop: () => {
         isStopped = true;
+        if (reconnectTimer !== undefined) {
+          window.clearTimeout(reconnectTimer);
+          reconnectTimer = undefined;
+        }
         socket?.close();
+      },
+      reconnect: () => {
+        isStopped = false;
+        socket?.close();
+        void start();
       }
     };
   }, [loadKitchenOrderItems]);
@@ -236,6 +260,7 @@ function App() {
     const controller = new AbortController();
     window.setTimeout(() => void loadKitchenOrderItems(controller.signal), 0);
     const connection = connectRestaurantHub();
+    connectionRef.current = connection;
     const pollingId = window.setInterval(() => {
       void loadKitchenOrderItems(controller.signal);
     }, 15000);
@@ -243,7 +268,8 @@ function App() {
     return () => {
       controller.abort();
       window.clearInterval(pollingId);
-      void connection.stop();
+      connection.stop();
+      connectionRef.current = null;
     };
   }, [connectRestaurantHub, isAuthenticated, loadKitchenOrderItems, userRole]);
 
@@ -466,7 +492,10 @@ function App() {
             <AlertTriangle size={18} />
             <span>Mất kết nối realtime với máy chủ (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng.</span>
           </div>
-          <button className="btn-reconnect" onClick={() => void loadKitchenOrderItems()}>
+          <button className="btn-reconnect" onClick={() => {
+            void loadKitchenOrderItems();
+            connectionRef.current?.reconnect();
+          }}>
             <RefreshCw size={14} /> Thử kết nối lại
           </button>
         </div>

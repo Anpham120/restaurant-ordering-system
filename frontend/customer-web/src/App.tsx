@@ -1,4 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  HubConnectionBuilder,
+  HubConnectionState,
+  LogLevel,
+  type HubConnection
+} from '@microsoft/signalr';
 import {
   Utensils,
   Calendar,
@@ -90,10 +96,50 @@ interface Order {
   orderId: string;
   orderCode: string;
   tableNumber: string;
-  status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
+  status: OrderItem['status'];
   items: OrderItem[];
   placedAt: Date;
 }
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: {
+    code: string;
+    message: string;
+    traceId?: string;
+  };
+}
+
+interface ApiOrderItem {
+  id: string;
+  menuItemName: string;
+  quantity: number;
+  unitPrice: number;
+  status: OrderItem['status'];
+  note?: string;
+}
+
+interface ApiOrder {
+  id: string;
+  orderCode: string;
+  tableSessionId: string;
+  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
+  tableNumber?: string;
+  createdAt?: string;
+  items: ApiOrderItem[];
+}
+
+interface OrderItemStatusEvent {
+  orderItemId: string;
+  orderId: string;
+  status: OrderItem['status'];
+}
+
+type RealtimeStatus = 'demo' | 'connecting' | 'connected' | 'polling' | 'offline';
+type ActiveTab = 'home' | 'menu' | 'reservation' | 'tracker' | 'ai';
+type DishSize = 'S' | 'M' | 'L' | 'XL';
+type DrinkTemperature = 'Nóng' | 'Đá';
 
 interface ChatMessage {
   id: string;
@@ -229,12 +275,53 @@ const CATEGORIES = [
   { id: "cat-dessert", name: "Tráng Miệng", emoji: "🍰" }
 ];
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+const RESTAURANT_HUB_PATH = '/hubs/restaurant';
+
 const getBadgeClass = (tag: string): string => {
   const t = tag.toLowerCase();
   if (t.includes('cay')) return 'badge-danger';
   if (t.includes('bán chạy') || t.includes('được thích') || t.includes('đặc sản')) return 'badge-primary';
   if (t.includes('healthy') || t.includes('thanh đạm') || t.includes('khai vị') || t.includes('thanh nhiệt') || t.includes('thanh mát')) return 'badge-success';
   return 'badge-warning';
+};
+
+const deriveOrderStatus = (items: OrderItem[]): OrderItem['status'] => {
+  if (items.length === 0) return 'Pending';
+  if (items.every(item => item.status === 'Cancelled')) return 'Cancelled';
+  if (items.every(item => item.status === 'Served' || item.status === 'Cancelled')) return 'Served';
+  if (items.some(item => item.status === 'Ready')) return 'Ready';
+  if (items.some(item => item.status === 'Preparing')) return 'Preparing';
+  return 'Pending';
+};
+
+const mapApiOrder = (apiOrder: ApiOrder, fallbackTableNumber: string): Order => {
+  const items = apiOrder.items.map(item => ({
+    id: item.id,
+    menuItemName: item.menuItemName,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    status: item.status,
+    note: item.note
+  }));
+
+  return {
+    orderId: apiOrder.id,
+    orderCode: apiOrder.orderCode,
+    tableNumber: apiOrder.tableNumber || fallbackTableNumber,
+    status: deriveOrderStatus(items),
+    items,
+    placedAt: apiOrder.createdAt ? new Date(apiOrder.createdAt) : new Date()
+  };
+};
+
+const createIdempotencyKey = () => {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const isActiveTab = (value: string | null): value is ActiveTab => {
+  return value === 'home' || value === 'menu' || value === 'reservation' || value === 'tracker' || value === 'ai';
 };
 
 export function App() {
@@ -252,8 +339,9 @@ export function App() {
   }, [theme]);
 
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
-    return (sessionStorage.getItem('activeTab') as any) || 'home';
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const savedTab = sessionStorage.getItem('activeTab');
+    return isActiveTab(savedTab) ? savedTab : 'home';
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
@@ -279,8 +367,8 @@ export function App() {
   const [dishNotes, setDishNotes] = useState("");
   const [dishQuantity, setDishQuantity] = useState(1);
   // Starbucks custom PDP states
-  const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
-  const [selectedTemperature, setSelectedTemperature] = useState<'Nóng' | 'Đá'>('Đá');
+  const [selectedSize, setSelectedSize] = useState<DishSize>('M');
+  const [selectedTemperature, setSelectedTemperature] = useState<DrinkTemperature>('Đá');
   const [selectedSweetness, setSelectedSweetness] = useState<string>('70%');
   const [extraToppings, setExtraToppings] = useState<{ [key: string]: number }>({
     'Trân Châu Hoàng Kim': 0,
@@ -303,6 +391,13 @@ export function App() {
 
   // Order Submission Status
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>(API_BASE_URL ? 'connecting' : 'demo');
+  const [lastRealtimeAt, setLastRealtimeAt] = useState<Date | null>(null);
+  const [realtimeMessage, setRealtimeMessage] = useState(
+    API_BASE_URL
+      ? 'Dang chuan bi ket noi realtime.'
+      : 'Che do demo: chua cau hinh VITE_API_BASE_URL nen trang thai se tu mo phong.'
+  );
 
   // AI Assistant Chat State (Flow 3.5)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -349,17 +444,30 @@ export function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('sessionToken');
     if (token) {
-      handleLoadTableSession(token);
+      sessionStorage.setItem('sessionToken', token);
+      const mockSession: TableSession = {
+        id: "sess_" + Math.random().toString(36).substr(2, 9),
+        tableId: "tbl-a01",
+        tableNumber: "A01",
+        status: "Active",
+        openedAt: new Date().toISOString()
+      };
+      sessionStorage.setItem('tableSession', JSON.stringify(mockSession));
+      window.setTimeout(() => {
+        setSessionToken(token);
+        setTableSession(mockSession);
+        setActiveTab('menu');
+      }, 0);
     }
     // Diagnostic log utilizing reservations to prevent TS unused warning
     console.log(`Hệ thống Antigravity sẵn sàng. Đã tải ${reservations.length} đặt bàn cục bộ.`);
-  }, [reservations]);
+  }, [reservations.length]);
 
   // -------------------------------------------------------------
   // SIMULATION: SIGNALR REALTIME UPDATES SIMULATOR (Flow 3.4)
   // -------------------------------------------------------------
   useEffect(() => {
-    if (placedOrders.length === 0) return;
+    if (API_BASE_URL || placedOrders.length === 0) return;
 
     const interval = setInterval(() => {
       setPlacedOrders(prevOrders => {
@@ -367,7 +475,7 @@ export function App() {
         const newOrders = prevOrders.map(order => {
           if (order.status === 'Served') return order;
 
-          let nextStatus: 'Pending' | 'Preparing' | 'Ready' | 'Served' = order.status;
+          let nextStatus: OrderItem['status'] = order.status;
           let nextItems = [...order.items];
 
           if (order.status === 'Pending') {
@@ -393,6 +501,9 @@ export function App() {
         });
 
         if (updated) {
+          setLastRealtimeAt(new Date());
+          setRealtimeStatus('demo');
+          setRealtimeMessage('Che do demo dang mo phong event trang thai mon.');
           return newOrders;
         }
         return prevOrders;
@@ -402,10 +513,126 @@ export function App() {
     return () => clearInterval(interval);
   }, [placedOrders]);
 
+  const applyOrderItemStatusEvent = useCallback((event: OrderItemStatusEvent) => {
+    setPlacedOrders(prevOrders => prevOrders.map(order => {
+      if (order.orderId !== event.orderId) return order;
+
+      const nextItems = order.items.map(item =>
+        item.id === event.orderItemId ? { ...item, status: event.status } : item
+      );
+
+      return {
+        ...order,
+        status: deriveOrderStatus(nextItems),
+        items: nextItems
+      };
+    }));
+
+    setLastRealtimeAt(new Date());
+    setRealtimeStatus('connected');
+    setRealtimeMessage(`SignalR da nhan cap nhat ${event.status}.`);
+  }, []);
+
+  const fetchOrderSnapshot = useCallback(async (orderId: string) => {
+    if (!API_BASE_URL || !sessionToken) return null;
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}?sessionToken=${encodeURIComponent(sessionToken)}`);
+    const payload = await response.json() as ApiResponse<ApiOrder>;
+
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.error?.message || 'Khong the tai trang thai order.');
+    }
+
+    return mapApiOrder(payload.data, tableSession?.tableNumber || 'A01');
+  }, [sessionToken, tableSession?.tableNumber]);
+
+  useEffect(() => {
+    if (!API_BASE_URL || !sessionToken || placedOrders.length === 0) return;
+
+    let connection: HubConnection | null = null;
+    let isCancelled = false;
+
+    const startConnection = async () => {
+      setRealtimeStatus('connecting');
+      setRealtimeMessage('Dang ket noi SignalR...');
+
+      connection = new HubConnectionBuilder()
+        .withUrl(`${API_BASE_URL}${RESTAURANT_HUB_PATH}?sessionToken=${encodeURIComponent(sessionToken)}`, {
+          accessTokenFactory: () => sessionToken
+        })
+        .withAutomaticReconnect()
+        .configureLogging(LogLevel.Warning)
+        .build();
+
+      connection.on('OrderItemPreparing', applyOrderItemStatusEvent);
+      connection.on('OrderItemReady', applyOrderItemStatusEvent);
+      connection.on('OrderItemServed', applyOrderItemStatusEvent);
+
+      connection.onreconnecting(() => {
+        if (isCancelled) return;
+        setRealtimeStatus('polling');
+        setRealtimeMessage('SignalR dang ket noi lai, tam thoi dung polling.');
+      });
+
+      connection.onreconnected(() => {
+        if (isCancelled) return;
+        setRealtimeStatus('connected');
+        setRealtimeMessage('SignalR da ket noi lai.');
+      });
+
+      connection.onclose(() => {
+        if (isCancelled) return;
+        setRealtimeStatus('polling');
+        setRealtimeMessage('SignalR tam thoi mat ket noi, he thong dang polling trang thai.');
+      });
+
+      try {
+        await connection.start();
+        if (isCancelled) return;
+        setRealtimeStatus('connected');
+        setRealtimeMessage('SignalR dang theo doi trang thai mon theo thoi gian thuc.');
+      } catch {
+        if (isCancelled) return;
+        setRealtimeStatus('polling');
+        setRealtimeMessage('Chua ket noi duoc SignalR, dang dung fallback polling.');
+      }
+    };
+
+    startConnection();
+
+    return () => {
+      isCancelled = true;
+      if (connection && connection.state !== HubConnectionState.Disconnected) {
+        void connection.stop();
+      }
+    };
+  }, [applyOrderItemStatusEvent, placedOrders.length, sessionToken]);
+
+  useEffect(() => {
+    if (!API_BASE_URL || !sessionToken || placedOrders.length === 0 || realtimeStatus === 'connected') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const snapshots = await Promise.all(
+          placedOrders.map(order => fetchOrderSnapshot(order.orderId))
+        );
+        setPlacedOrders(snapshots.filter((order): order is Order => order !== null));
+        setRealtimeStatus('polling');
+        setLastRealtimeAt(new Date());
+        setRealtimeMessage('Fallback polling da cap nhat trang thai order.');
+      } catch {
+        setRealtimeStatus('offline');
+        setRealtimeMessage('Chua the cap nhat trang thai. Vui long giu man hinh nay de thu lai tu dong.');
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchOrderSnapshot, placedOrders, realtimeStatus, sessionToken]);
+
   // -------------------------------------------------------------
   // ACTIONS: LOADING TABLE SESSION
   // -------------------------------------------------------------
-  const handleLoadTableSession = (token: string) => {
+  function handleLoadTableSession(token: string) {
     sessionStorage.setItem('sessionToken', token);
     const mockSession: TableSession = {
       id: "sess_" + Math.random().toString(36).substr(2, 9),
@@ -423,7 +650,7 @@ export function App() {
 
     const cleanUrl = window.location.pathname + `?sessionToken=${token}`;
     window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-  };
+  }
 
   const handleSimulateQRScan = () => {
     const randomToken = "secure-qr-session-token-" + Math.floor(1000 + Math.random() * 9000);
@@ -549,9 +776,55 @@ export function App() {
   // -------------------------------------------------------------
   // ACTIONS: ORDER SUBMISSION (POST /api/v1/orders)
   // -------------------------------------------------------------
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     if (cart.length === 0) return;
+    if (API_BASE_URL && !sessionToken) {
+      triggerToast('Vui long quet ma QR tai ban truoc khi goi mon.');
+      return;
+    }
+
     setIsSubmittingOrder(true);
+
+    if (API_BASE_URL && sessionToken) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionToken,
+            idempotencyKey: createIdempotencyKey(),
+            items: cart.map(item => ({
+              menuItemId: item.menuItemId,
+              quantity: item.quantity,
+              note: item.note
+            }))
+          })
+        });
+        const payload = await response.json() as ApiResponse<ApiOrder>;
+
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error?.message || 'Khong the tao order.');
+        }
+
+        const newOrder = mapApiOrder(payload.data, tableSession?.tableNumber || 'A01');
+        setPlacedOrders(prev => [newOrder, ...prev]);
+        setCart([]);
+        setIsCartOpen(false);
+        setActiveTab('tracker');
+        setRealtimeStatus('connecting');
+        setRealtimeMessage('Order da tao, dang ket noi SignalR de theo doi trang thai mon.');
+        triggerToast('Gui order thanh cong! Dang theo doi trang thai realtime.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Khong the tao order.';
+        triggerToast(message);
+      } finally {
+        setIsSubmittingOrder(false);
+      }
+
+      return;
+    }
 
     setTimeout(() => {
       const orderCode = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -578,6 +851,8 @@ export function App() {
       setIsCartOpen(false);
       setIsSubmittingOrder(false);
       setActiveTab('tracker');
+      setRealtimeStatus('demo');
+      setRealtimeMessage('Che do demo dang mo phong SignalR vi chua co VITE_API_BASE_URL.');
       triggerToast("🚀 Gửi order thành công! Đang chờ bếp phản hồi...");
     }, 1500);
   };
@@ -633,8 +908,8 @@ export function App() {
     setIsAiTyping(true);
 
     setTimeout(() => {
-      let aiResponseText = "";
-      let sources: string[] = ["menu.md"];
+      let aiResponseText: string;
+      let sources: string[];
       let suggestedAction: ChatMessage["suggestedAction"] = undefined;
 
       const lowerQuery = query.toLowerCase();
@@ -1416,6 +1691,15 @@ export function App() {
           {activeTab === 'tracker' && (
             <div className="animate-fade-in tracker-container">
               <div className="tracker-header">
+                <div className={`realtime-status-strip ${realtimeStatus}`} aria-live="polite">
+                  <span className="realtime-status-dot"></span>
+                  <span>{realtimeMessage}</span>
+                  {lastRealtimeAt && (
+                    <span className="realtime-status-time">
+                      Cap nhat {lastRealtimeAt.toLocaleTimeString('vi-VN')}
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
                   <Clock size={14} /> Theo Dõi Gọi Món Realtime
                 </div>
@@ -1722,7 +2006,7 @@ export function App() {
                         key={item.key}
                         type="button"
                         className={`size-option-btn ${selectedSize === item.key ? 'active' : ''}`}
-                        onClick={() => setSelectedSize(item.key as any)}
+                        onClick={() => setSelectedSize(item.key as DishSize)}
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -1761,7 +2045,7 @@ export function App() {
                             key={item.key}
                             type="button"
                             className={`custom-pill-btn ${selectedTemperature === item.key ? 'active' : ''}`}
-                            onClick={() => setSelectedTemperature(item.key as any)}
+                            onClick={() => setSelectedTemperature(item.key as DrinkTemperature)}
                             style={{
                               flex: 1,
                               padding: '10px 8px',

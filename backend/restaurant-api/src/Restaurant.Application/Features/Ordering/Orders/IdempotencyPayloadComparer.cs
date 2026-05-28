@@ -30,15 +30,9 @@ public static class IdempotencyPayloadComparer
                 Quantity = item.Quantity,
                 Note = NormalizeNote(item.Note),
             })
-            .GroupBy(item => new { item.MenuItemId, item.Note })
-            .Select(group => new IdempotencyPayloadItem
-            {
-                MenuItemId = group.Key.MenuItemId,
-                Note = group.Key.Note,
-                Quantity = group.Sum(item => item.Quantity),
-            })
             .OrderBy(item => item.MenuItemId)
             .ThenBy(item => item.Note, StringComparer.Ordinal)
+            .ThenBy(item => item.Quantity)
             .ToList();
     }
 

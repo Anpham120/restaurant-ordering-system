@@ -19,7 +19,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ManagerOnly", policy =>
         policy.RequireAuthenticatedUser());
     options.AddPolicy("CashierOrManager", policy =>
-        policy.RequireAuthenticatedUser());
+        policy.RequireRole("Cashier", "Manager"));
 });
 
 var app = builder.Build();

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Restaurant.Infrastructure.Data;
 using Restaurant.Infrastructure.Features.Menu.Categories;
 using Restaurant.Infrastructure.Features.Menu.Items;
+using Restaurant.Infrastructure.Features.Billing;
 
 namespace Restaurant.Infrastructure;
 
@@ -24,6 +25,7 @@ public static class DependencyInjection
                     connectionString,
                     npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(RestaurantDbContext).Assembly.FullName))
                 .UseSnakeCaseNamingConvention());
+        services.AddSingleton(TimeProvider.System);
 
         // Menu Category handlers
         services.AddScoped<GetMenuCategoriesHandler>();
@@ -34,6 +36,11 @@ public static class DependencyInjection
         services.AddScoped<GetMenuItemsHandler>();
         services.AddScoped<CreateMenuItemHandler>();
         services.AddScoped<UpdateMenuItemHandler>();
+
+        // Billing handlers
+        services.AddScoped<GetInvoicePreviewHandler>();
+        services.AddScoped<CreateInvoiceHandler>();
+        services.AddScoped<GetInvoiceHandler>();
 
         return services;
     }

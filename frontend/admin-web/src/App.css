@@ -328,16 +328,11 @@
 
 /* 4. Staff Dashboard (Sơ đồ bàn) styles */
 .staff-panel-layout {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   flex-grow: 1;
-}
-
-@media (max-width: 1024px) {
-  .staff-panel-layout {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
 }
 
 .table-map-section {

@@ -251,6 +251,50 @@ export function App() {
     }
   }, [theme]);
 
+  // Realtime bridge: Listen to status updates from Kitchen Display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const cookieVal = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('tv_food_order_status_updates='));
+      if (cookieVal) {
+        try {
+          const jsonStr = decodeURIComponent(cookieVal.split('=')[1]);
+          const statusUpdates = JSON.parse(jsonStr);
+          if (statusUpdates && statusUpdates.length > 0) {
+            let updatedAny = false;
+            setPlacedOrders(prevOrders => {
+              return prevOrders.map(order => {
+                let orderUpdated = false;
+                const newItems = order.items.map(item => {
+                  const update = statusUpdates.find((u: any) => u.dishName === item.menuItemName);
+                  if (update) {
+                    orderUpdated = true;
+                    updatedAny = true;
+                    return { ...item, status: update.status };
+                  }
+                  return item;
+                });
+                if (orderUpdated) {
+                  return { ...order, items: newItems };
+                }
+                return order;
+              });
+            });
+            if (updatedAny) {
+              triggerToast("🔔 Bếp đã cập nhật trạng thái món ăn mới!");
+            }
+            // Clear the status updates cookie
+            document.cookie = "tv_food_order_status_updates=; path=/; max-age=0";
+          }
+        } catch (e) {
+          console.error("Error reading order status updates", e);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
     return (sessionStorage.getItem('activeTab') as any) || 'home';
@@ -567,11 +611,26 @@ export function App() {
       const newOrder: Order = {
         orderId: `order_${Math.random().toString(36).substr(2, 9)}`,
         orderCode: orderCode,
-        tableNumber: tableSession?.tableNumber || "Vãng Lai",
+        tableNumber: tableSession?.tableNumber || "A02", // Default to A02 if not scanned
         status: 'Pending',
         items: newItems,
         placedAt: new Date()
       };
+
+      // Realtime bridge: Save order to shared cookie for admin-web's Kitchen Kanban display
+      const existingCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('tv_food_shared_orders='));
+      let sharedOrders = [];
+      if (existingCookie) {
+        try {
+          sharedOrders = JSON.parse(decodeURIComponent(existingCookie.split('=')[1]));
+        } catch (e) {
+          sharedOrders = [];
+        }
+      }
+      sharedOrders.push(newOrder);
+      document.cookie = `tv_food_shared_orders=${encodeURIComponent(JSON.stringify(sharedOrders))}; path=/; max-age=86400`;
 
       setPlacedOrders(prev => [newOrder, ...prev]);
       setCart([]);

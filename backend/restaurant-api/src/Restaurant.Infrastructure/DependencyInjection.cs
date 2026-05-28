@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Restaurant.Application.Features.Reservations.CheckIn;
 using Restaurant.Infrastructure.Data;
 using Restaurant.Infrastructure.Features.Menu.Categories;
 using Restaurant.Infrastructure.Features.Menu.Items;
 using Restaurant.Infrastructure.Features.Ordering.Orders;
+using Restaurant.Infrastructure.Features.Reservations.CheckIn;
 
 namespace Restaurant.Infrastructure;
 
@@ -38,6 +40,9 @@ public static class DependencyInjection
 
         // Ordering handlers
         services.AddScoped<CreateOrderHandler>();
+
+        services.AddScoped<IReservationCheckInStore, ReservationCheckInStore>();
+        services.AddSingleton<ISessionTokenGenerator, SecureSessionTokenGenerator>();
 
         return services;
     }

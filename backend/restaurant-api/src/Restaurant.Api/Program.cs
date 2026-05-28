@@ -1,7 +1,8 @@
+using Restaurant.Api.Modules.Reservation;
+using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
 using Restaurant.Api.Modules.Ordering;
-using Restaurant.Api.Modules.Restaurant;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,5 +43,8 @@ app.MapHealthChecks("/health");
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
 app.MapOrdersEndpoints();
+
+// Reservation module
+app.MapReservationCheckInEndpoints();
 
 app.Run();

@@ -2042,3 +2042,121 @@ body.dark-theme .ai-empty-output {
   }
 }
 
+/* ==========================================================================
+   11. MULTI-DEVICE RESPONSIVE LAYOUT OPTIMIZATIONS
+   ========================================================================== */
+.staff-map-container-row {
+  display: flex;
+  width: 100%;
+  gap: 24px;
+}
+
+.table-map-section {
+  flex: 2;
+  min-width: 0; /* Prevents flex items from overflowing */
+}
+
+.table-control-sidebar {
+  flex: 1;
+  min-width: 320px;
+}
+
+/* Tablet Screens (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .staff-map-container-row {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .table-map-section {
+    width: 100%;
+  }
+
+  .table-control-sidebar {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .res-list-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+/* Mobile Screens (max-width: 768px) */
+@media (max-width: 768px) {
+  .staff-sub-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: stretch;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .staff-nav-tab {
+    flex: 1;
+    min-width: calc(50% - 6px);
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .res-search-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .search-input-wrap {
+    min-width: 100%;
+  }
+
+  .res-status-filter-group {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .res-filter-pill {
+    flex: 1;
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    min-width: fit-content;
+  }
+
+  .res-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .res-badge {
+    align-self: flex-start;
+  }
+
+  .res-action-btn-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .res-action-btn-row button {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .assign-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .assign-select {
+    width: 100%;
+  }
+
+  .btn-confirm-assign,
+  .btn-cancel-assign {
+    width: 100%;
+    padding: 10px 16px;
+  }
+}
+
+

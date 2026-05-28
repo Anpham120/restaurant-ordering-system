@@ -493,9 +493,9 @@ function App() {
                 </div>
 
                 {staffActiveTab === 'map' ? (
-                  <div className="staff-map-container-row" style={{ display: 'flex', width: '100%', gap: '24px' }}>
+                  <div className="staff-map-container-row">
                     {/* Left Side: Sơ đồ bàn (Table Map) */}
-                    <div className="table-map-section" style={{ flex: 2 }}>
+                    <div className="table-map-section">
                       <div className="panel-header-row">
                         <div className="panel-title-group">
                           <h2>Sơ Đồ Bàn Phục Vụ</h2>
@@ -564,7 +564,7 @@ function App() {
                     </div>
 
                     {/* Right Side: Table Detail & Check-in Control */}
-                    <div className="table-control-sidebar" style={{ flex: 1 }}>
+                    <div className="table-control-sidebar">
                       {selectedTable ? (
                         <div className="control-card">
                           <div className="control-card-header">

@@ -114,21 +114,36 @@
   background-color: var(--success);
   box-shadow: 0 0 8px var(--success);
   animation: blink-pulse 2s infinite;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Glow dot color reflects SignalR connection state */
+.live-connecting .indicator-glow,
+.live-reconnecting .indicator-glow {
+  background-color: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+  animation: blink-pulse 0.8s infinite;
+}
+
+.live-disconnected .indicator-glow {
+  background-color: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
+  animation: none;
 }
 
 @keyframes blink-pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%   { opacity: 0.4; }
+  50%  { opacity: 1; }
   100% { opacity: 0.4; }
 }
 
-/* Quick developer role switchers to make review and usage incredibly fast */
+/* Quick developer role switchers */
 .quick-role-selector {
   display: flex;
   align-items: center;
   background-color: var(--bg-surface-elevated);
   padding: 4px;
-  border-radius: var(--radius-md) !important; /* 12px bo góc */
+  border-radius: var(--radius-md) !important;
   border: 1px solid var(--border-color);
   gap: 2px;
 }
@@ -169,7 +184,6 @@
   align-items: center;
   gap: 10px;
 }
-
 .btn-icon-circle {
   width: 38px;
   height: 38px;
@@ -783,10 +797,18 @@
 }
 
 .serving-item-meta small {
-  color: var(--text-muted);
-  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--success-text);
+  background-color: var(--success-bg);
+  font-size: 0.68rem;
   font-weight: 700;
-  margin-top: 2px;
+  letter-spacing: 0.02em;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  margin-top: 3px;
+  width: fit-content;
 }
 
 .btn-serve-item {

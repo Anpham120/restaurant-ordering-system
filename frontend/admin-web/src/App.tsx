@@ -70,9 +70,9 @@ function upsertReadyOrderItem(items: OrderItem[], event: OrderItemReadyEvent): O
     id: event.orderItemId,
     orderId: event.orderId,
     tableId: event.tableId ?? event.tableNumber ?? 'unknown',
-    dishName: event.menuItemName ?? `Món từ đơn ${event.orderId}`,
+    dishName: event.menuItemName ?? `Món #${event.orderItemId}`,
     quantity: event.quantity ?? 1,
-    note: event.note ?? 'SignalR OrderItemReady',
+    note: event.note ?? '',
     status: 'Ready',
     timeAdded: event.readyAt ?? new Date().toISOString(),
     source: 'realtime',
@@ -156,6 +156,13 @@ function App() {
   const realtimeRoleEnabled = isAuthenticated && (userRole === 'Staff' || userRole === 'Manager');
   const isRealtimeConnected = realtimeStatus === 'connected';
 
+  // Auto-dismiss the ready-event toast after 5 seconds
+  useEffect(() => {
+    if (!lastReadyEvent) return;
+    const timer = setTimeout(() => setLastReadyEvent(null), 5000);
+    return () => clearTimeout(timer);
+  }, [lastReadyEvent]);
+
   // Toggle Theme helper
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -193,14 +200,13 @@ function App() {
     });
     connection.onreconnected(() => {
       if (!isDisposed) setRealtimeStatus('connected');
+      setReconnectAttempt(0); // reset counter after successful reconnect
     });
     connection.onclose(() => {
       if (!isDisposed) setRealtimeStatus('disconnected');
     });
 
-    queueMicrotask(() => {
-      if (!isDisposed) setRealtimeStatus('connecting');
-    });
+    setRealtimeStatus('connecting');
     connection.start()
       .then(() => {
         if (!isDisposed) setRealtimeStatus('connected');
@@ -778,7 +784,16 @@ function App() {
                     {lastReadyEvent && (
                       <div className="ready-event-toast">
                         <CheckCircle size={14} />
-                        <span>Món {lastReadyEvent.orderItemId} từ đơn {lastReadyEvent.orderId} đã sẵn sàng.</span>
+                        <span>
+                          {lastReadyEvent.tableNumber
+                            ? `Bàn ${lastReadyEvent.tableNumber}: `
+                            : lastReadyEvent.tableId
+                            ? `Bàn ${lastReadyEvent.tableId}: `
+                            : ''}
+                          <strong>
+                            {lastReadyEvent.menuItemName ?? `Món #${lastReadyEvent.orderItemId}`}
+                          </strong>{lastReadyEvent.quantity && lastReadyEvent.quantity > 1 ? ` ×${lastReadyEvent.quantity}` : ''} đã sẵn sàng phục vụ!
+                        </span>
                       </div>
                     )}
                     <div className="serving-items-scroll">
@@ -790,7 +805,7 @@ function App() {
                             <div className="serving-item-meta">
                               <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
                               <span>{item.dishName} (x{item.quantity})</span>
-                              {item.source === 'realtime' && <small>SignalR OrderItemReady</small>}
+                              {item.source === 'realtime' && <small>🔴 Realtime</small>}
                             </div>
                             <button 
                               className="btn-serve-item"

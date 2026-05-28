@@ -271,27 +271,6 @@ export function App() {
                   if (update && update.status !== item.status) {
                     orderUpdated = true;
                     updatedAny = true;
-                    
-                    // Speech Synthesis audio update
-                    try {
-                      let speechText = "";
-                      if (update.status === 'Preparing') {
-                        speechText = `Món ${item.menuItemName} của quý khách đang được đầu bếp chuẩn bị.`;
-                      } else if (update.status === 'Ready') {
-                        speechText = `Món ${item.menuItemName} đã chuẩn bị xong, nhân viên phục vụ đang mang tới bàn.`;
-                      } else if (update.status === 'Served') {
-                        speechText = `Món ${item.menuItemName} đã phục vụ thành công lên bàn. Chúc quý khách dùng ngon miệng!`;
-                      }
-                      if (speechText) {
-                        const utterance = new SpeechSynthesisUtterance(speechText);
-                        utterance.lang = 'vi-VN';
-                        utterance.volume = 0.8;
-                        window.speechSynthesis.speak(utterance);
-                      }
-                    } catch (soundErr) {
-                      console.warn("Speech Synthesis audio update blocked", soundErr);
-                    }
-
                     return { ...item, status: update.status };
                   }
                   return item;
@@ -1705,11 +1684,6 @@ export function App() {
                             className="btn btn-secondary" 
                             style={{ fontSize: '0.78rem', padding: '8px 10px', height: 'auto', minHeight: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
                             onClick={() => {
-                              try {
-                                const utterance = new SpeechSynthesisUtterance("Đang gọi nhân viên hỗ trợ tới bàn.");
-                                utterance.lang = 'vi-VN';
-                                window.speechSynthesis.speak(utterance);
-                              } catch (e) {}
                               triggerToast("🛎️ Đã gửi yêu cầu trợ giúp! Nhân viên phục vụ đang di chuyển tới bàn.");
                             }}
                           >
@@ -1720,11 +1694,6 @@ export function App() {
                             className="btn btn-secondary" 
                             style={{ fontSize: '0.78rem', padding: '8px 10px', height: 'auto', minHeight: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
                             onClick={() => {
-                              try {
-                                const utterance = new SpeechSynthesisUtterance("Đã gửi yêu cầu thêm nước đá.");
-                                utterance.lang = 'vi-VN';
-                                window.speechSynthesis.speak(utterance);
-                              } catch (e) {}
                               triggerToast("🧊 Đã yêu cầu thêm Nước Đá! Nhân viên sẽ mang lên ngay.");
                             }}
                           >
@@ -1735,11 +1704,6 @@ export function App() {
                             className="btn btn-secondary" 
                             style={{ fontSize: '0.78rem', padding: '8px 10px', height: 'auto', minHeight: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
                             onClick={() => {
-                              try {
-                                const utterance = new SpeechSynthesisUtterance("Đã gửi yêu cầu thêm khăn lạnh.");
-                                utterance.lang = 'vi-VN';
-                                window.speechSynthesis.speak(utterance);
-                              } catch (e) {}
                               triggerToast("🧻 Đã yêu cầu thêm Khăn Lạnh! Nhân viên sẽ mang lên ngay.");
                             }}
                           >

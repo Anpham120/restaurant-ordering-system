@@ -107,6 +107,9 @@ function App() {
   const [billingTableId, setBillingTableId] = useState<string>('T102');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'BankTransfer'>('Cash');
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [paidInvoices, setPaidInvoices] = useState<any[]>([]);
+  const [selectedHistoricalInvoice, setSelectedHistoricalInvoice] = useState<any | null>(null);
 
   // Manager AI Operational Report states
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -259,11 +262,36 @@ function App() {
 
   // Submit payment & clear active table session (Cashier Action)
   const executePayment = (tableId: string) => {
+    const items = getBillingItems(tableId);
+    const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const discountAmount = Math.round(subtotal * (discountPercent / 100));
+    const vat = Math.round((subtotal - discountAmount) * 0.08);
+    const grandTotal = subtotal - discountAmount + vat;
+    const invCode = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newInvoice = {
+      invoiceCode: invCode,
+      tableName: tables.find(t => t.id === tableId)?.name || tableId,
+      subtotal,
+      discount: discountAmount,
+      vat,
+      grandTotal,
+      paymentMethod,
+      paidAt: new Date().toLocaleTimeString('vi-VN'),
+      items
+    };
+
+    // Save invoice to local log history
+    setPaidInvoices(prev => [newInvoice, ...prev]);
+
     // Remove active orders for this table
     setOrderItems(prev => prev.filter(item => item.tableId !== tableId));
     // Set table state to Cleaning
     setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'Cleaning', currentSessionId: undefined } : t));
     
+    // Reset discount
+    setDiscountPercent(0);
+
     setIsPaidSuccess(true);
     setTimeout(() => {
       setIsPaidSuccess(false);
@@ -318,8 +346,9 @@ function App() {
 
   const currentBillingItems = getBillingItems(billingTableId);
   const billingSubtotal = currentBillingItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const billingTax = Math.round(billingSubtotal * 0.08); // 8% VAT
-  const billingGrandTotal = billingSubtotal + billingTax;
+  const billingDiscount = Math.round(billingSubtotal * (discountPercent / 100));
+  const billingTax = Math.round((billingSubtotal - billingDiscount) * 0.08); // 8% VAT
+  const billingGrandTotal = billingSubtotal - billingDiscount + billingTax;
 
   return (
     <div className="admin-app">
@@ -1089,14 +1118,37 @@ function App() {
             {userRole === 'Cashier' && (
               <div className="cashier-panel-layout">
                 
-                {/* Left side: occupied tables list */}
-                <div className="occupied-tables-sidebar">
-                  <div className="sidebar-title-box">
-                    <h2>Bàn Đang Hoạt Động</h2>
-                    <p>Chọn bàn có phiên sử dụng để in hóa đơn và thanh toán.</p>
+                {/* Left side: occupied tables list & history logs */}
+                <div className="occupied-tables-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '850px' }}>
+                  <div className="sidebar-title-box" style={{ marginBottom: '8px', paddingBottom: '8px' }}>
+                    <h2>Thu Ngân & Thanh Toán</h2>
+                    <p>Chọn bàn có phiên hoạt động hoặc xem lịch sử ca làm việc.</p>
                   </div>
 
-                  <div className="occupied-tables-scroll">
+                  {/* Active Tables Search input */}
+                  <div className="search-active-tables-box" style={{ marginBottom: '10px' }}>
+                    <input 
+                      type="text"
+                      className="form-input"
+                      placeholder="🔍 Tìm bàn đang hoạt động..."
+                      style={{ fontSize: '0.85rem', padding: '10px 14px' }}
+                      id="cashier-table-search"
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase();
+                        const tiles = document.querySelectorAll('.occupied-table-tile');
+                        tiles.forEach(tile => {
+                          const text = tile.textContent?.toLowerCase() || '';
+                          if (text.includes(val)) {
+                            (tile as HTMLElement).style.display = 'flex';
+                          } else {
+                            (tile as HTMLElement).style.display = 'none';
+                          }
+                        });
+                      }}
+                    />
+                  </div>
+
+                  <div className="occupied-tables-scroll" style={{ flexGrow: 1, maxHeight: '350px' }}>
                     {tables.filter(t => t.status === 'Occupied').length === 0 ? (
                       <div className="empty-box-inline">Không có bàn nào đang có khách.</div>
                     ) : (
@@ -1104,16 +1156,91 @@ function App() {
                         <div 
                           key={table.id}
                           className={`occupied-table-tile ${billingTableId === table.id ? 'active' : ''}`}
-                          onClick={() => setBillingTableId(table.id)}
+                          onClick={() => {
+                            setBillingTableId(table.id);
+                            setDiscountPercent(0); // Reset discount when switching table
+                          }}
                         >
                           <div className="occupied-tile-meta">
                             <strong>{table.name}</strong>
                             <span>{getBillingItems(table.id).length} Món ăn đã gọi</span>
                           </div>
+                          {orderItems.some(i => i.tableId === table.id && i.status !== 'Served') && (
+                            <span className="unserved-warn-dot" title="Còn món chưa phục vụ" style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: 'var(--accent)',
+                              display: 'inline-block',
+                              marginLeft: '8px',
+                              boxShadow: '0 0 6px var(--accent)'
+                            }}></span>
+                          )}
                           <ChevronRight size={16} />
                         </div>
                       ))
                     )}
+                  </div>
+
+                  {/* Historical Invoices section */}
+                  <div className="invoice-history-box" style={{ 
+                    borderTop: '1px solid var(--border-color)', 
+                    paddingTop: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    flexGrow: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🧾 Lịch Sử Hóa Đơn ({paidInvoices.length})
+                    </h3>
+                    
+                    <div className="invoice-history-scroll" style={{ 
+                      overflowY: 'auto', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px',
+                      maxHeight: '300px'
+                    }}>
+                      {paidInvoices.length === 0 ? (
+                        <div className="empty-box-inline" style={{ fontSize: '0.8rem', padding: '16px' }}>
+                          Chưa xuất hóa đơn nào trong ca.
+                        </div>
+                      ) : (
+                        paidInvoices.map((inv, idx) => (
+                          <div 
+                            key={idx}
+                            style={{
+                              backgroundColor: 'var(--bg-deep)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '10px 14px',
+                              textAlign: 'left',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <strong style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>{inv.invoiceCode}</strong>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{inv.tableName}</div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{inv.paidAt} - {inv.paymentMethod === 'Cash' ? 'Tiền mặt' : 'Ck'}</span>
+                            </div>
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                              <strong style={{ fontSize: '0.88rem' }}>{inv.grandTotal.toLocaleString()}đ</strong>
+                              <button 
+                                className="btn btn-tertiary"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto', minHeight: 'unset' }}
+                                onClick={() => setSelectedHistoricalInvoice(inv)}
+                              >
+                                Xem
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1136,6 +1263,51 @@ function App() {
                           <span>Giờ in: {new Date().toLocaleTimeString('vi-VN')}</span>
                         </div>
                       </div>
+
+                      {/* Business rule validation warning & quick serve button */}
+                      {(() => {
+                        const unserved = orderItems.filter(i => i.tableId === billingTableId && i.status !== 'Served');
+                        if (unserved.length > 0) {
+                          return (
+                            <div className="business-rule-warning-alert" style={{
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              border: '1px dashed var(--accent)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '16px',
+                              marginBottom: '20px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px',
+                              textAlign: 'left'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent)' }}>
+                                <AlertTriangle size={20} />
+                                <strong style={{ fontSize: '0.92rem' }}>CẢNH BÁO NGHIỆP VỤ: Còn {unserved.length} món chưa được phục vụ!</strong>
+                              </div>
+                              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                Để tuân thủ API contract & quy định của hệ thống TV FOOD, bàn không được phép thanh toán khi vẫn còn món đang chuẩn bị hoặc sẵn sàng trong bếp.
+                              </p>
+                              <div style={{ display: 'flex', gap: '10px' }}>
+                                <button 
+                                  className="btn btn-tertiary text-danger"
+                                  style={{ padding: '6px 12px', fontSize: '0.8rem', height: 'auto', minHeight: 'unset', width: 'auto' }}
+                                  onClick={() => {
+                                    setOrderItems(prev => prev.map(item => {
+                                      if (item.tableId === billingTableId) {
+                                        return { ...item, status: 'Served' };
+                                      }
+                                      return item;
+                                    }));
+                                  }}
+                                >
+                                  ⚡ Xác Nhận Phục Vụ Nhanh Tất Cả Món
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       {/* Billing Items list table */}
                       <div className="invoice-table-container">
@@ -1167,12 +1339,43 @@ function App() {
                         </table>
                       </div>
 
+                      {/* Discount coupons row selector */}
+                      <div className="discount-selector-box" style={{ marginBottom: '20px', textAlign: 'left' }}>
+                        <span className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>
+                          🎫 Chương trình ưu đãi / Giảm giá (Coupon):
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {([0, 5, 10, 15, 20] as const).map(pct => (
+                            <button
+                              key={pct}
+                              className={`btn ${discountPercent === pct ? 'btn-primary' : 'btn-secondary'}`}
+                              style={{ 
+                                padding: '8px 16px', 
+                                fontSize: '0.82rem', 
+                                minWidth: '60px',
+                                border: discountPercent === pct ? 'none' : '1px solid var(--border-color)',
+                                backgroundColor: discountPercent === pct ? 'var(--primary)' : 'var(--bg-deep)'
+                              }}
+                              onClick={() => setDiscountPercent(pct)}
+                            >
+                              {pct === 0 ? 'Không giảm' : `${pct}%`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Summary prices calculations */}
                       <div className="invoice-price-summary">
                         <div className="summary-row">
                           <span>Tạm tính (chưa thuế):</span>
                           <span>{billingSubtotal.toLocaleString()}đ</span>
                         </div>
+                        {billingDiscount > 0 && (
+                          <div className="summary-row" style={{ color: 'var(--accent)' }}>
+                            <span>Giảm giá ({discountPercent}%):</span>
+                            <span>-{billingDiscount.toLocaleString()}đ</span>
+                          </div>
+                        )}
                         <div className="summary-row">
                           <span>Thuế VAT (8%):</span>
                           <span>{billingTax.toLocaleString()}đ</span>
@@ -1231,7 +1434,12 @@ function App() {
                       <div className="invoice-actions-footer">
                         <button 
                           className="btn btn-primary w-full"
+                          disabled={orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served')}
                           onClick={() => executePayment(billingTableId)}
+                          style={{
+                            opacity: orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served') ? 0.5 : 1,
+                            cursor: orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served') ? 'not-allowed' : 'pointer'
+                          }}
                         >
                           Xác Nhận Đã Thu Tiền & Giải Phóng Bàn
                         </button>
@@ -1531,6 +1739,105 @@ function App() {
           <p>© {new Date().getFullYear()} TV FOOD Admin Portal. Được cung cấp bởi Giải Pháp Quản Lý Nhà Hàng Monolith.</p>
         </div>
       </footer>
+
+      {/* Historical Invoices Overlay Modal */}
+      {selectedHistoricalInvoice && (
+        <div className="historical-invoice-modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div className="invoice-box-card" style={{
+            width: '500px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '24px',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div className="invoice-header" style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--primary-glow)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '4px', fontWeight: 700 }}>
+                  ĐÃ THANH TOÁN ({selectedHistoricalInvoice.paymentMethod === 'Cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN'})
+                </span>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '4px 12px', fontSize: '0.8rem', height: 'auto', minHeight: 'unset' }}
+                  onClick={() => setSelectedHistoricalInvoice(null)}
+                >
+                  Đóng
+                </button>
+              </div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0' }}>CHI TIẾT HÓA ĐƠN ĐÃ LƯU</h3>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div>Mã hóa đơn: <strong>{selectedHistoricalInvoice.invoiceCode}</strong></div>
+                <div>Bàn phục vụ: <strong>{selectedHistoricalInvoice.tableName}</strong></div>
+                <div>Thời gian in: {selectedHistoricalInvoice.paidAt}</div>
+              </div>
+            </div>
+
+            <table className="invoice-data-table" style={{ width: '100%', marginBottom: '16px' }}>
+              <thead>
+                <tr>
+                  <th>Món ăn</th>
+                  <th>SL</th>
+                  <th>Đơn giá</th>
+                  <th className="text-right">Tổng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedHistoricalInvoice.items.map((item: any, idx: number) => (
+                  <tr key={idx}>
+                    <td>{item.dishName}</td>
+                    <td>x{item.quantity}</td>
+                    <td>{item.price.toLocaleString()}đ</td>
+                    <td className="text-right">{(item.price * item.quantity).toLocaleString()}đ</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="invoice-price-summary" style={{ backgroundColor: 'var(--bg-deep)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
+              <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
+                <span>Tạm tính:</span>
+                <span>{selectedHistoricalInvoice.subtotal.toLocaleString()}đ</span>
+              </div>
+              {selectedHistoricalInvoice.discount > 0 && (
+                <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px', color: 'var(--accent)' }}>
+                  <span>Khuyến mãi:</span>
+                  <span>-{selectedHistoricalInvoice.discount.toLocaleString()}đ</span>
+                </div>
+              )}
+              <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
+                <span>Thuế VAT (8%):</span>
+                <span>{selectedHistoricalInvoice.vat.toLocaleString()}đ</span>
+              </div>
+              <div className="summary-row grand-total-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)', borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '6px' }}>
+                <span>Tổng cộng:</span>
+                <span>{selectedHistoricalInvoice.grandTotal.toLocaleString()}đ</span>
+              </div>
+            </div>
+            
+            <button 
+              className="btn btn-secondary w-full"
+              style={{ marginTop: '16px' }}
+              onClick={() => setSelectedHistoricalInvoice(null)}
+            >
+              Đóng Cửa Sổ
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

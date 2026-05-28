@@ -295,6 +295,36 @@ export function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Realtime SignalR connection status state (API Contract: /hubs/restaurant)
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+
+  // Attempt standard SignalR WebSocket connection
+  useEffect(() => {
+    const wsUrl = "ws://localhost:5000/hubs/restaurant";
+    let socket: WebSocket | null = null;
+    
+    try {
+      socket = new WebSocket(wsUrl);
+      socket.onopen = () => {
+        setIsRealtimeConnected(true);
+        console.log("🟢 Connected to live SignalR hub!");
+      };
+      socket.onclose = () => {
+        setIsRealtimeConnected(false);
+        console.log("⚠️ SignalR disconnected. Safe fallback polling mode enabled.");
+      };
+      socket.onerror = () => {
+        setIsRealtimeConnected(false);
+      };
+    } catch (e) {
+      setIsRealtimeConnected(false);
+    }
+    
+    return () => {
+      if (socket) socket.close();
+    };
+  }, []);
+
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
     return (sessionStorage.getItem('activeTab') as any) || 'home';
@@ -1481,6 +1511,56 @@ export function App() {
                 <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Món Đang Đợi Bếp</h2>
                 <p style={{ color: 'var(--text-secondary)' }}>Màn hình cập nhật trạng thái tự động qua SignalR và fallback polling.</p>
               </div>
+
+              {/* Realtime warning banner */}
+              {isRealtimeConnected ? (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  color: '#10b981',
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span className="live-indicator-dot" style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#10b981',
+                    boxShadow: '0 0 10px #10b981'
+                  }}></span>
+                  <span>Đang kết nối thời gian thực với máy chủ Bếp (SignalR Live).</span>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
+                  color: '#f59e0b',
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  fontSize: '0.88rem',
+                  fontWeight: 500,
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  lineHeight: '1.4'
+                }}>
+                  <span className="live-indicator-dot" style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#f59e0b',
+                    animation: 'pulse 1.5s infinite'
+                  }}></span>
+                  <span>Mất kết nối thời gian thực (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng (Đang hoạt động).</span>
+                </div>
+              )}
 
               {placedOrders.length === 0 ? (
                 <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>

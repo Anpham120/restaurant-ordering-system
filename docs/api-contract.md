@@ -850,6 +850,13 @@ Backend cung cấp hub:
 
 Client gửi JWT khi cần nhận event nội bộ. Customer QR flow có thể subscribe bằng `sessionToken` nếu backend cho phép.
 
+Client methods:
+
+| Method | Auth | Ghi chú |
+|---|---|---|
+| `SubscribeToOrderStatus(sessionToken, orderId?)` | Public customer QR flow | Thêm connection vào group realtime theo `sessionToken`; nếu có `orderId` thì nhận thêm event theo order cụ thể. |
+| `UnsubscribeFromOrderStatus(sessionToken, orderId?)` | Public customer QR flow | Rời group realtime đã subscribe. |
+
 Event contract:
 
 ### NewOrderCreated

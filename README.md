@@ -137,14 +137,11 @@ FastAPI AI RAG Service
 
 ### 5.1. Frontend
 
-- React hoặc Next.js
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- TanStack Query
-- Zustand
-- React Hook Form
-- Zod
+- React 19 / TypeScript
+- Vanilla CSS (CSS thuần tối ưu hóa thẩm mỹ Premium nhã nhặn, không sử dụng Tailwind CSS)
+- Lucide React (Thư viện Icons trực quan)
+- TanStack Query / Zustand
+- React Hook Form / Zod
 - SignalR Client
 
 ### 5.2. Backend

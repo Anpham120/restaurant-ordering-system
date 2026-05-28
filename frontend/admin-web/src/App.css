@@ -96,6 +96,17 @@
   border-radius: 9999px;
 }
 
+.live-connecting,
+.live-reconnecting {
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+}
+
+.live-disconnected {
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+}
+
 .indicator-glow {
   width: 8px;
   height: 8px;
@@ -689,9 +700,50 @@
 
 .staff-serving-list-box h3 {
   font-size: 1.1rem;
+}
+
+.serving-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 8px;
+}
+
+.serving-realtime-badge {
+  flex-shrink: 0;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--success-text);
+  background-color: var(--success-bg);
+}
+
+.badge-connecting,
+.badge-reconnecting {
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+}
+
+.badge-disconnected {
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+}
+
+.ready-event-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .serving-items-scroll {
@@ -728,6 +780,13 @@
 
 .serving-item-meta strong {
   color: var(--primary);
+}
+
+.serving-item-meta small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 2px;
 }
 
 .btn-serve-item {

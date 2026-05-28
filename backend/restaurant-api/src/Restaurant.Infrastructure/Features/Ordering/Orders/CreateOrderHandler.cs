@@ -180,6 +180,7 @@ public sealed class CreateOrderHandler(RestaurantDbContext db)
 
     private static string GenerateOrderCode(DateTimeOffset now)
     {
-        return $"ORD-{now:yyyyMMddHHmmssfff}-{Random.Shared.Next(1000, 10000)}";
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+        return $"ORD-{now:yyyyMMddHHmmssfff}-{uniqueSuffix}";
     }
 }

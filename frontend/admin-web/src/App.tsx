@@ -130,6 +130,9 @@ function App() {
   const [assigningResId, setAssigningResId] = useState<string | null>(null);
   const [selectedTableIdForRes, setSelectedTableIdForRes] = useState<string>('');
 
+  // Kitchen Kanban Filter (Flow 32)
+  const [kitchenCategoryFilter, setKitchenCategoryFilter] = useState<'All' | 'Food' | 'Drinks' | 'Desserts'>('All');
+
   // Toggle Theme helper
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -1268,38 +1271,106 @@ function App() {
                   </div>
                 </div>
 
+                {/* Station Filter Pills and Audio controls (Flow 32) */}
+                <div className="kitchen-station-filters" style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '16px 24px',
+                  background: 'var(--bg-surface)',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  border: '1px solid var(--border-color)',
+                  gap: '16px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: '8px' }}>
+                      Phân Khu Bếp (Stations):
+                    </span>
+                    {(['All', 'Food', 'Drinks', 'Desserts'] as const).map(cat => (
+                      <button
+                        key={cat}
+                        className={`res-filter-pill ${kitchenCategoryFilter === cat ? 'active' : ''}`}
+                        onClick={() => setKitchenCategoryFilter(cat)}
+                      >
+                        {cat === 'All' && '🔥 Tất Cả Trạm'}
+                        {cat === 'Food' && '🍲 Trạm Món Chính'}
+                        {cat === 'Drinks' && '☕ Quầy Đồ Uống'}
+                        {cat === 'Desserts' && '🍰 Quầy Tráng Miệng'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={() => {
+                        const latePending = orderItems.filter(i => i.status === 'Pending' && getWaitTimeStr(i.timeAdded) >= 10);
+                        if (latePending.length === 0) {
+                          const utterance = new SpeechSynthesisUtterance("Không có món ăn nào bị trễ. Bếp đang vận hành xuất sắc!");
+                          utterance.lang = 'vi-VN';
+                          window.speechSynthesis.speak(utterance);
+                        } else {
+                          const utterance = new SpeechSynthesisUtterance(`Cảnh báo: Có ${latePending.length} món ăn đang đợi trên mười phút. Xin bếp ưu tiên!`);
+                          utterance.lang = 'vi-VN';
+                          window.speechSynthesis.speak(utterance);
+                        }
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: 'none' }}
+                    >
+                      <AlertTriangle size={15} /> Quét Cảnh Báo Trễ Món
+                    </button>
+                  </div>
+                </div>
+
                 {/* Kanban columns Grid */}
                 <div className="kanban-board-grid">
                   
                   {/* Column 1: Pending */}
                   <div className="kanban-column col-pending">
                     <div className="column-header">
-                      <h3>Chờ Chế Biến ({orderItems.filter(i => itemStatusFilter(i, 'Pending')).length})</h3>
+                      <h3>Chờ Chế Biến ({orderItems.filter(i => itemStatusFilter(i, 'Pending', kitchenCategoryFilter)).length})</h3>
                     </div>
                     <div className="column-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Pending')).length === 0 ? (
+                      {orderItems.filter(i => itemStatusFilter(i, 'Pending', kitchenCategoryFilter)).length === 0 ? (
                         <div className="kanban-empty-state">Trống</div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Pending')).map(item => (
-                          <div key={item.id} className="kanban-item-card">
-                            <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
-                              <span className="item-time-waiting">
-                                <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
-                              </span>
+                        orderItems.filter(i => itemStatusFilter(i, 'Pending', kitchenCategoryFilter)).map(item => {
+                          const waitTime = getWaitTimeStr(item.timeAdded);
+                          return (
+                            <div key={item.id} className="kanban-item-card" style={{
+                              borderLeft: waitTime >= 15 ? '4px solid var(--danger)' : waitTime >= 10 ? '4px solid #f59e0b' : '4px solid var(--border-color)'
+                            }}>
+                              <div className="item-card-top">
+                                <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                                {waitTime >= 15 ? (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    🚨 TRỄ MÓN ({waitTime}m)
+                                  </span>
+                                ) : waitTime >= 10 ? (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    ⏳ CHỜ LÂU ({waitTime}m)
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    🟢 ỔN ĐỊNH ({waitTime}m)
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="item-dish-name">{item.dishName}</h4>
+                              <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
+                              {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                              
+                              <button 
+                                className="btn btn-primary btn-advance w-full mt-10"
+                                onClick={() => advanceOrderStatus(item.id)}
+                              >
+                                Bắt Đầu Nấu <Play size={12} />
+                              </button>
                             </div>
-                            <h4 className="item-dish-name">{item.dishName}</h4>
-                            <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
-                            
-                            <button 
-                              className="btn btn-primary btn-advance w-full mt-10"
-                              onClick={() => advanceOrderStatus(item.id)}
-                            >
-                              Bắt Đầu Nấu <Play size={12} />
-                            </button>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -1307,32 +1378,47 @@ function App() {
                   {/* Column 2: Preparing */}
                   <div className="kanban-column col-preparing">
                     <div className="column-header">
-                      <h3>Đang Nấu ({orderItems.filter(i => itemStatusFilter(i, 'Preparing')).length})</h3>
+                      <h3>Đang Nấu ({orderItems.filter(i => itemStatusFilter(i, 'Preparing', kitchenCategoryFilter)).length})</h3>
                     </div>
                     <div className="column-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Preparing')).length === 0 ? (
+                      {orderItems.filter(i => itemStatusFilter(i, 'Preparing', kitchenCategoryFilter)).length === 0 ? (
                         <div className="kanban-empty-state">Trống</div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Preparing')).map(item => (
-                          <div key={item.id} className="kanban-item-card card-preparing-active">
-                            <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
-                              <span className="item-time-waiting">
-                                <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
-                              </span>
+                        orderItems.filter(i => itemStatusFilter(i, 'Preparing', kitchenCategoryFilter)).map(item => {
+                          const waitTime = getWaitTimeStr(item.timeAdded);
+                          return (
+                            <div key={item.id} className="kanban-item-card card-preparing-active" style={{
+                              borderLeft: waitTime >= 15 ? '4px solid var(--danger)' : waitTime >= 10 ? '4px solid #f59e0b' : '4px solid var(--primary)'
+                            }}>
+                              <div className="item-card-top">
+                                <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                                {waitTime >= 15 ? (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    🚨 TRỄ MÓN ({waitTime}m)
+                                  </span>
+                                ) : waitTime >= 10 ? (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    ⏳ CHỜ LÂU ({waitTime}m)
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    🟢 ĐANG NẤU ({waitTime}m)
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="item-dish-name">{item.dishName}</h4>
+                              <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
+                              {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                              
+                              <button 
+                                className="btn btn-secondary btn-advance w-full mt-10"
+                                onClick={() => advanceOrderStatus(item.id)}
+                              >
+                                Báo Món Chín <Check size={14} />
+                              </button>
                             </div>
-                            <h4 className="item-dish-name">{item.dishName}</h4>
-                            <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
-                            
-                            <button 
-                              className="btn btn-secondary btn-advance w-full mt-10"
-                              onClick={() => advanceOrderStatus(item.id)}
-                            >
-                              Báo Món Chín <Check size={14} />
-                            </button>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -1340,17 +1426,17 @@ function App() {
                   {/* Column 3: Ready */}
                   <div className="kanban-column col-ready">
                     <div className="column-header">
-                      <h3>Sẵn Sàng Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
+                      <h3>Sẵn Sàng Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready', kitchenCategoryFilter)).length})</h3>
                     </div>
                     <div className="column-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Ready')).length === 0 ? (
+                      {orderItems.filter(i => itemStatusFilter(i, 'Ready', kitchenCategoryFilter)).length === 0 ? (
                         <div className="kanban-empty-state">Trống</div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Ready')).map(item => (
-                          <div key={item.id} className="kanban-item-card card-ready-active">
+                        orderItems.filter(i => itemStatusFilter(i, 'Ready', kitchenCategoryFilter)).map(item => (
+                          <div key={item.id} className="kanban-item-card card-ready-active" style={{ borderLeft: '4px solid var(--primary)' }}>
                             <div className="item-card-top">
                               <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
-                              <span className="item-time-waiting">Đã xong</span>
+                              <span className="item-time-waiting" style={{ color: 'var(--primary)', fontWeight: 700 }}>✓ XONG</span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
                             <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
@@ -2109,8 +2195,20 @@ function getWaitTimeStr(isoString: string): number {
 }
 
 // Custom Order item status filters
-function itemStatusFilter(item: OrderItem, status: OrderItem['status']): boolean {
-  return item.status === status;
+function getDishCategory(dishName: string): 'Food' | 'Drinks' | 'Desserts' {
+  if (dishName.includes('Trà') || dishName.includes('Cà Phê') || dishName.includes('Đá') || dishName.includes('Nước') || dishName.includes('Sữa')) {
+    return 'Drinks';
+  }
+  if (dishName.includes('Bánh Mì Phô Mai') || dishName.includes('Bánh Ngọt') || dishName.includes('Kem') || dishName.includes('Chè')) {
+    return 'Desserts';
+  }
+  return 'Food';
+}
+
+function itemStatusFilter(item: OrderItem, status: OrderItem['status'], categoryFilter: 'All' | 'Food' | 'Drinks' | 'Desserts' = 'All'): boolean {
+  if (item.status !== status) return false;
+  if (categoryFilter === 'All') return true;
+  return getDishCategory(item.dishName) === categoryFilter;
 }
 
 export default App;

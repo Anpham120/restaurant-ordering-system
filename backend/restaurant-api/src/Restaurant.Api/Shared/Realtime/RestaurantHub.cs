@@ -4,6 +4,31 @@ namespace Restaurant.Api.Shared.Realtime;
 
 public sealed class RestaurantHub : Hub
 {
+    public override async Task OnConnectedAsync()
+    {
+        if (Context.User?.IsInRole("Cashier") == true)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.Cashiers, Context.ConnectionAborted);
+        }
+
+        if (Context.User?.IsInRole("Kitchen") == true)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.Kitchen, Context.ConnectionAborted);
+        }
+
+        if (Context.User?.IsInRole("Manager") == true)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.Managers, Context.ConnectionAborted);
+        }
+
+        if (Context.User?.IsInRole("Staff") == true)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.Staff, Context.ConnectionAborted);
+        }
+
+        await base.OnConnectedAsync();
+    }
+
     public async Task SubscribeToOrderStatus(string sessionToken, Guid? orderId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionToken);
@@ -40,4 +65,3 @@ public sealed class RestaurantHub : Hub
         }
     }
 }
-

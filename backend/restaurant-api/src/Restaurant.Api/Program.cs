@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddSignalR();
-builder.Services.AddScoped<IRestaurantRealtimePublisher, SignalRRestaurantRealtimePublisher>();
+builder.Services.AddSingleton<IRestaurantRealtimePublisher, SignalRRestaurantRealtimePublisher>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 

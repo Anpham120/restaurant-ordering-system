@@ -42,7 +42,12 @@ app.MapHealthChecks("/health");
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
 
+// Table module
+app.MapTableEndpoints();
+
 // Reservation module
 app.MapReservationCheckInEndpoints();
+app.MapReservationEndpoints();
+app.MapTableSessionEndpoints();
 
 app.Run();

@@ -44,7 +44,12 @@ app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
 app.MapOrdersEndpoints();
 
+// Table module
+app.MapTableEndpoints();
+
 // Reservation module
 app.MapReservationCheckInEndpoints();
+app.MapReservationEndpoints();
+app.MapTableSessionEndpoints();
 
 app.Run();

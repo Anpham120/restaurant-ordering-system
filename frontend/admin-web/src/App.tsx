@@ -25,6 +25,7 @@ interface Reservation {
   time: string;
   note: string;
   status: 'Pending' | 'CheckedIn' | 'Cancelled';
+  tableId?: string;
 }
 
 interface OrderItem {
@@ -76,7 +77,7 @@ function App() {
   const [reservations, setReservations] = useState<Reservation[]>([
     { id: 'RES_001', name: 'Nguyễn Văn Hùng', phone: '0987654321', guests: 4, time: '18:30', note: 'Gần cửa sổ, không cay nồng', status: 'Pending' },
     { id: 'RES_002', name: 'Phạm Thị Lan', phone: '0912345678', guests: 8, time: '19:00', note: 'Phòng VIP, tiệc sinh nhật', status: 'Pending' },
-    { id: 'RES_003', name: 'Trần Minh Đức', phone: '0903334445', guests: 2, time: '17:30', note: 'Bàn sân vườn mát mẻ', status: 'Pending' },
+    { id: 'RES_003', name: 'Trần Minh Đức', phone: '0903334445', guests: 2, time: '17:30', note: 'Bàn sân vườn mát mẻ', status: 'Pending', tableId: 'T103' },
   ]);
 
   const [orderItems, setOrderItems] = useState<OrderItem[]>([
@@ -220,7 +221,7 @@ function App() {
   // Check-in customer reservation at a selected table
   const checkInReservation = (resId: string, tableId: string) => {
     // 1. Update Reservation status
-    setReservations(prev => prev.map(r => r.id === resId ? { ...r, status: 'CheckedIn' } : r));
+    setReservations(prev => prev.map(r => r.id === resId ? { ...r, status: 'CheckedIn', tableId: tableId } : r));
     // 2. Change table status to Occupied
     setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'Occupied', currentSessionId: `sess_${Date.now()}` } : t));
     // 3. Clear local selections
@@ -578,6 +579,43 @@ function App() {
                               {selectedTable.status}
                             </span>
                           </div>
+
+                          {/* Matching Reservation Customer Preview */}
+                          {(() => {
+                            const matchingRes = reservations.find(r => r.tableId === selectedTable.id && (r.status === 'CheckedIn' || r.status === 'Pending'));
+                            if (matchingRes) {
+                              const isPending = matchingRes.status === 'Pending';
+                              return (
+                                <div className="table-customer-card" style={{
+                                  backgroundColor: isPending ? 'var(--accent-glow)' : 'var(--primary-glow)',
+                                  border: `1px solid ${isPending ? 'var(--accent)' : 'var(--primary)'}`,
+                                  borderRadius: 'var(--radius-sm)',
+                                  padding: '12px 16px',
+                                  marginBottom: '16px',
+                                  textAlign: 'left'
+                                }}>
+                                  <h4 style={{ 
+                                    margin: '0 0 8px 0', 
+                                    fontSize: '0.9rem', 
+                                    color: isPending ? 'var(--accent)' : 'var(--primary)', 
+                                    textTransform: 'uppercase', 
+                                    fontWeight: 800 
+                                  }}>
+                                    {isPending ? '📅 Đơn Đặt Trước (Chờ Check-in)' : '👤 Khách Hàng Tại Bàn (Đã Check-in)'}
+                                  </h4>
+                                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-primary)' }}>
+                                    <div><strong>Họ tên:</strong> {matchingRes.name}</div>
+                                    <div><strong>Điện thoại:</strong> {matchingRes.phone}</div>
+                                    <div><strong>Số khách:</strong> {matchingRes.guests} người</div>
+                                    <div><strong>Giờ đặt:</strong> {matchingRes.time}</div>
+                                    {matchingRes.note && <div><strong>Ghi chú:</strong> {matchingRes.note}</div>}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
 
                           {/* Action options depending on table status */}
                           <div className="control-action-options">

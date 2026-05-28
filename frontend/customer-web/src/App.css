@@ -744,10 +744,12 @@
 /* Booking Receipt Style */
 .booking-receipt {
   padding: 32px;
-  background: linear-gradient(135deg, #181a20 0%, #111317 100%);
-  border: 1px solid var(--border-color);
+  background: #ffffff;
+  border: 1px solid rgba(32, 21, 21, 0.12);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  color: #201515 !important;
 }
 
 .booking-receipt::before,
@@ -759,6 +761,7 @@
   height: 4px;
   background-image: linear-gradient(90deg, transparent 4px, var(--bg-deep) 4px);
   background-size: 8px 4px;
+  z-index: 2;
 }
 
 .booking-receipt::before {
@@ -772,32 +775,34 @@
 .receipt-header {
   text-align: center;
   margin-bottom: 24px;
-  border-bottom: 1px dashed var(--border-color);
+  border-bottom: 1px dashed rgba(32, 21, 21, 0.15);
   padding-bottom: 20px;
 }
 
 .receipt-success-icon {
   font-size: 2.5rem;
-  color: var(--success);
+  color: #2e7d32;
   margin-bottom: 12px;
 }
 
 .receipt-title {
   font-size: 1.5rem;
   font-weight: 700;
+  color: #201515 !important;
 }
 
 .receipt-code-label {
   font-size: 0.78rem;
-  color: var(--text-muted);
+  color: #605d52 !important;
   text-transform: uppercase;
   margin-top: 8px;
+  font-weight: 600;
 }
 
 .receipt-code {
   font-family: var(--font-heading);
-  font-size: 1.3rem;
-  color: var(--secondary);
+  font-size: 1.6rem;
+  color: #ff4f00 !important;
   font-weight: 800;
   letter-spacing: 0.05em;
   margin-top: 4px;
@@ -808,7 +813,7 @@
   flex-direction: column;
   gap: 14px;
   margin-bottom: 24px;
-  border-bottom: 1px dashed var(--border-color);
+  border-bottom: 1px dashed rgba(32, 21, 21, 0.15);
   padding-bottom: 20px;
 }
 
@@ -819,12 +824,12 @@
 }
 
 .receipt-label {
-  color: var(--text-secondary);
+  color: #605d52 !important;
 }
 
 .receipt-value {
   font-weight: 600;
-  color: var(--text-primary);
+  color: #201515 !important;
   text-align: right;
 }
 
@@ -841,10 +846,12 @@
   height: 120px;
   background: white;
   padding: 8px;
+  border: 1px solid rgba(32, 21, 21, 0.1);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .receipt-qr-mock {
@@ -853,13 +860,13 @@
 }
 
 .receipt-instructions {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 79, 0, 0.06);
   padding: 16px;
   border-radius: var(--radius-md);
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: #605d52 !important;
   text-align: left;
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid #ff4f00;
 }
 
 /* 7. Cart Drawer */

@@ -115,6 +115,13 @@ function App() {
   // Realtime banner warning state
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
 
+  // Staff Reservation Search & Check-in states
+  const [staffActiveTab, setStaffActiveTab] = useState<'map' | 'reservations'>('map');
+  const [resSearchKeyword, setResSearchKeyword] = useState('');
+  const [resStatusFilter, setResStatusFilter] = useState<'All' | 'Pending' | 'CheckedIn' | 'Cancelled'>('All');
+  const [assigningResId, setAssigningResId] = useState<string | null>(null);
+  const [selectedTableIdForRes, setSelectedTableIdForRes] = useState<string>('');
+
   // Toggle Theme helper
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -221,6 +228,11 @@ function App() {
     if (selectedTable && selectedTable.id === tableId) {
       setSelectedTable(prev => prev ? { ...prev, status: 'Occupied' } : null);
     }
+  };
+
+  // Cancel reservation helper
+  const cancelReservation = (resId: string) => {
+    setReservations(prev => prev.map(r => r.id === resId ? { ...r, status: 'Cancelled' } : r));
   };
 
   // Clear or reset Table state back to Available
@@ -460,265 +472,459 @@ function App() {
             {/* 1. STAFF ROLE DASHBOARD */}
             {userRole === 'Staff' && (
               <div className="staff-panel-layout">
-                
-                {/* Left Side: Sơ đồ bàn (Table Map) */}
-                <div className="table-map-section">
-                  <div className="panel-header-row">
-                    <div className="panel-title-group">
-                      <h2>Sơ Đồ Bàn Phục Vụ</h2>
-                      <p>Nhấp chọn bàn để kiểm tra trạng thái hoặc Check-in cho khách đặt trước.</p>
-                    </div>
-
-                    <div className="area-tabs-filter">
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'All' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('All')}
-                      >
-                        Tất Cả ({tables.length})
-                      </button>
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'A' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('A')}
-                      >
-                        Sân Vườn (Khu A)
-                      </button>
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'B' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('B')}
-                      >
-                        Phòng VIP (Khu B)
-                      </button>
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'C' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('C')}
-                      >
-                        Sảnh Chính (Khu C)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Table Grid displaying 12px rounded cards */}
-                  <div className="table-grid-display">
-                    {tables
-                      .filter(t => selectedArea === 'All' ? true : t.area === selectedArea)
-                      .map(table => (
-                        <div 
-                          key={table.id}
-                          className={`table-card-item card-status-${table.status.toLowerCase()} ${selectedTable?.id === table.id ? 'active' : ''}`}
-                          onClick={() => setSelectedTable(table)}
-                        >
-                          <div className="table-card-seats">{table.seats} Chỗ</div>
-                          <h3 className="table-card-title">{table.name}</h3>
-                          <span className={`table-status-label status-${table.status.toLowerCase()}`}>
-                            {table.status === 'Available' && 'Còn Trống'}
-                            {table.status === 'Reserved' && 'Được Đặt'}
-                            {table.status === 'Occupied' && 'Có Khách'}
-                            {table.status === 'Cleaning' && 'Đang Dọn'}
-                            {table.status === 'Inactive' && 'Bảo Trì'}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* Color Guide Status */}
-                  <div className="table-status-guide">
-                    <span className="guide-item"><span className="dot dot-available"></span> Còn trống</span>
-                    <span className="guide-item"><span className="dot dot-reserved"></span> Đã đặt chỗ</span>
-                    <span className="guide-item"><span className="dot dot-occupied"></span> Đang có khách</span>
-                    <span className="guide-item"><span className="dot dot-cleaning"></span> Đang dọn bàn</span>
-                    <span className="guide-item"><span className="dot dot-inactive"></span> Bảo trì</span>
-                  </div>
+                {/* Staff Sub-navigation Tabs */}
+                <div className="staff-sub-nav">
+                  <button 
+                    className={`staff-nav-tab ${staffActiveTab === 'map' ? 'active' : ''}`}
+                    onClick={() => setStaffActiveTab('map')}
+                  >
+                    🗺️ Sơ Đồ Bàn Phục Vụ
+                  </button>
+                  <button 
+                    className={`staff-nav-tab ${staffActiveTab === 'reservations' ? 'active' : ''}`}
+                    onClick={() => {
+                      setStaffActiveTab('reservations');
+                      setAssigningResId(null);
+                      setResSearchKeyword('');
+                    }}
+                  >
+                    📅 Tìm Kiếm & Check-in Đặt Chỗ
+                  </button>
                 </div>
 
-                {/* Right Side: Table Detail & Check-in Control */}
-                <div className="table-control-sidebar">
-                  {selectedTable ? (
-                    <div className="control-card">
-                      <div className="control-card-header">
-                        <h3>Thông Tin {selectedTable.name}</h3>
-                        <span className="badge-seats">{selectedTable.seats} Ghế ngồi</span>
+                {staffActiveTab === 'map' ? (
+                  <div className="staff-map-container-row" style={{ display: 'flex', width: '100%', gap: '24px' }}>
+                    {/* Left Side: Sơ đồ bàn (Table Map) */}
+                    <div className="table-map-section" style={{ flex: 2 }}>
+                      <div className="panel-header-row">
+                        <div className="panel-title-group">
+                          <h2>Sơ Đồ Bàn Phục Vụ</h2>
+                          <p>Nhấp chọn bàn để kiểm tra trạng thái hoặc Check-in cho khách đặt trước.</p>
+                        </div>
+
+                        <div className="area-tabs-filter">
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'All' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('All')}
+                          >
+                            Tất Cả ({tables.length})
+                          </button>
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'A' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('A')}
+                          >
+                            Sân Vườn (Khu A)
+                          </button>
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'B' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('B')}
+                          >
+                            Phòng VIP (Khu B)
+                          </button>
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'C' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('C')}
+                          >
+                            Sảnh Chính (Khu C)
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="control-table-status-block">
-                        <span className="status-label-prefix">Trạng thái hiện tại:</span>
-                        <span className={`status-pill pill-${selectedTable.status.toLowerCase()}`}>
-                          {selectedTable.status}
-                        </span>
-                      </div>
-
-                      {/* Action options depending on table status */}
-                      <div className="control-action-options">
-                        {selectedTable.status === 'Available' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Khách vãng lai vừa ngồi vào bàn này? Chuyển sang Có Khách để khách tự gọi món qua QR.</p>
-                            <button 
-                              className="btn btn-primary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Occupied')}
+                      {/* Table Grid displaying 12px rounded cards */}
+                      <div className="table-grid-display">
+                        {tables
+                          .filter(t => selectedArea === 'All' ? true : t.area === selectedArea)
+                          .map(table => (
+                            <div 
+                              key={table.id}
+                              className={`table-card-item card-status-${table.status.toLowerCase()} ${selectedTable?.id === table.id ? 'active' : ''}`}
+                              onClick={() => setSelectedTable(table)}
                             >
-                              <Play size={16} /> Mở Phiên Phục Vụ
-                            </button>
-                            <button 
-                              className="btn btn-tertiary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Reserved')}
-                            >
-                              <Calendar size={16} /> Chuyển Sang Đã Đặt
-                            </button>
-                            <button 
-                              className="btn btn-danger w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                              <Wrench size={16} /> Chuyển Sang Bảo Trì
-                            </button>
-                          </div>
-                        )}
-
-                        {selectedTable.status === 'Reserved' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Khách đặt chỗ đã đến? Chọn khách đặt trước từ danh sách dưới đây để hoàn tất Check-in.</p>
-                            
-                            <div className="quick-reservation-select-box">
-                              <label className="form-label">Chọn khách check-in:</label>
-                              <select 
-                                className="form-input"
-                                onChange={(e) => {
-                                  const res = reservations.find(r => r.id === e.target.value);
-                                  if (res) setSelectedReservation(res);
-                                }}
-                              >
-                                <option value="">-- Chọn Đơn Đặt Chỗ --</option>
-                                {reservations.filter(r => r.status === 'Pending').map(r => (
-                                  <option key={r.id} value={r.id}>
-                                    {r.name} ({r.guests} khách - {r.time})
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="table-card-seats">{table.seats} Chỗ</div>
+                              <h3 className="table-card-title">{table.name}</h3>
+                              <span className={`table-status-label status-${table.status.toLowerCase()}`}>
+                                {table.status === 'Available' && 'Còn Trống'}
+                                {table.status === 'Reserved' && 'Được Đặt'}
+                                {table.status === 'Occupied' && 'Có Khách'}
+                                {table.status === 'Cleaning' && 'Đang Dọn'}
+                                {table.status === 'Inactive' && 'Bảo Trì'}
+                              </span>
                             </div>
+                          ))}
+                      </div>
 
-                            {selectedReservation && (
-                              <div className="selected-res-preview">
-                                <strong>Khách:</strong> {selectedReservation.name}<br />
-                                <strong>Điện thoại:</strong> {selectedReservation.phone}<br />
-                                <strong>Thời gian:</strong> {selectedReservation.time}<br />
-                                <strong>Ghi chú:</strong> {selectedReservation.note || 'Không có'}<br />
+                      {/* Color Guide Status */}
+                      <div className="table-status-guide">
+                        <span className="guide-item"><span className="dot dot-available"></span> Còn trống</span>
+                        <span className="guide-item"><span className="dot dot-reserved"></span> Đã đặt chỗ</span>
+                        <span className="guide-item"><span className="dot dot-occupied"></span> Đang có khách</span>
+                        <span className="guide-item"><span className="dot dot-cleaning"></span> Đang dọn bàn</span>
+                        <span className="guide-item"><span className="dot dot-inactive"></span> Bảo trì</span>
+                      </div>
+                    </div>
+
+                    {/* Right Side: Table Detail & Check-in Control */}
+                    <div className="table-control-sidebar" style={{ flex: 1 }}>
+                      {selectedTable ? (
+                        <div className="control-card">
+                          <div className="control-card-header">
+                            <h3>Thông Tin {selectedTable.name}</h3>
+                            <span className="badge-seats">{selectedTable.seats} Ghế ngồi</span>
+                          </div>
+
+                          <div className="control-table-status-block">
+                            <span className="status-label-prefix">Trạng thái hiện tại:</span>
+                            <span className={`status-pill pill-${selectedTable.status.toLowerCase()}`}>
+                              {selectedTable.status}
+                            </span>
+                          </div>
+
+                          {/* Action options depending on table status */}
+                          <div className="control-action-options">
+                            {selectedTable.status === 'Available' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Khách vãng lai vừa ngồi vào bàn này? Chuyển sang Có Khách để khách tự gọi món qua QR.</p>
                                 <button 
-                                  className="btn btn-primary w-full mt-10"
-                                  onClick={() => checkInReservation(selectedReservation.id, selectedTable.id)}
+                                  className="btn btn-primary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Occupied')}
                                 >
-                                  <CheckCircle size={16} /> Xác Nhận Check-In
+                                  <Play size={16} /> Mở Phiên Phục Vụ
+                                </button>
+                                <button 
+                                  className="btn btn-tertiary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Reserved')}
+                                >
+                                  <Calendar size={16} /> Chuyển Sang Đã Đặt
+                                </button>
+                                <button 
+                                  className="btn btn-danger w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  <Wrench size={16} /> Chuyển Sang Bảo Trì
                                 </button>
                               </div>
                             )}
 
-                            <button 
-                              className="btn btn-danger w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                              <Wrench size={16} /> Chuyển Sang Bảo Trì
-                            </button>
-                          </div>
-                        )}
+                            {selectedTable.status === 'Reserved' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Khách đặt chỗ đã đến? Chọn khách đặt trước từ danh sách dưới đây để hoàn tất Check-in.</p>
+                                
+                                <div className="quick-reservation-select-box">
+                                  <label className="form-label">Chọn khách check-in:</label>
+                                  <select 
+                                    className="form-input"
+                                    onChange={(e) => {
+                                      const res = reservations.find(r => r.id === e.target.value);
+                                      if (res) setSelectedReservation(res);
+                                    }}
+                                  >
+                                    <option value="">-- Chọn Đơn Đặt Chỗ --</option>
+                                    {reservations.filter(r => r.status === 'Pending').map(r => (
+                                      <option key={r.id} value={r.id}>
+                                        {r.name} ({r.guests} khách - {r.time})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
 
-                        {selectedTable.status === 'Occupied' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Bàn đang có khách. Bạn có thể sao chép và gửi URL đặt món QR trực tiếp tại bàn này.</p>
-                            
-                            <div className="qr-url-box">
-                              <span className="qr-label">URL Gọi Món QR:</span>
-                              <div className="qr-input-row">
-                                <input 
-                                  type="text" 
-                                  readOnly 
-                                  className="form-input text-ellipsis" 
-                                  value={`${window.location.protocol}//${window.location.host}/?table=${selectedTable.id}&session=sess_${selectedTable.id}`}
-                                />
+                                {selectedReservation && (
+                                  <div className="selected-res-preview">
+                                    <strong>Khách:</strong> {selectedReservation.name}<br />
+                                    <strong>Điện thoại:</strong> {selectedReservation.phone}<br />
+                                    <strong>Thời gian:</strong> {selectedReservation.time}<br />
+                                    <strong>Ghi chú:</strong> {selectedReservation.note || 'Không có'}<br />
+                                    <button 
+                                      className="btn btn-primary w-full mt-10"
+                                      onClick={() => checkInReservation(selectedReservation.id, selectedTable.id)}
+                                    >
+                                      <CheckCircle size={16} /> Xác Nhận Check-In
+                                    </button>
+                                  </div>
+                                )}
+
                                 <button 
-                                  className="btn btn-primary btn-copy" 
-                                  onClick={() => copyQRUrl(selectedTable.id)}
+                                  className="btn btn-danger w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
-                                  {copiedUrl === selectedTable.id ? <Check size={16} /> : <Copy size={16} />}
+                                  <Wrench size={16} /> Chuyển Sang Bảo Trì
                                 </button>
                               </div>
-                              {copiedUrl === selectedTable.id && (
-                                <span className="copy-success-message">Đã sao chép liên kết gọi món!</span>
-                              )}
-                            </div>
+                            )}
 
-                            <button 
-                              className="btn btn-tertiary w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Cleaning')}
-                            >
-                              <RefreshCw size={16} /> Chuyển dọn dẹp / Trống bàn
-                            </button>
-                          </div>
-                        )}
+                            {selectedTable.status === 'Occupied' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Bàn đang có khách. Bạn có thể sao chép và gửi URL đặt món QR trực tiếp tại bàn này.</p>
+                                
+                                <div className="qr-url-box">
+                                  <span className="qr-label">URL Gọi Món QR:</span>
+                                  <div className="qr-input-row">
+                                    <input 
+                                      type="text" 
+                                      readOnly 
+                                      className="form-input text-ellipsis" 
+                                      value={`${window.location.protocol}//${window.location.host}/?table=${selectedTable.id}&session=sess_${selectedTable.id}`}
+                                    />
+                                    <button 
+                                      className="btn btn-primary btn-copy" 
+                                      onClick={() => copyQRUrl(selectedTable.id)}
+                                    >
+                                      {copiedUrl === selectedTable.id ? <Check size={16} /> : <Copy size={16} />}
+                                    </button>
+                                  </div>
+                                  {copiedUrl === selectedTable.id && (
+                                    <span className="copy-success-message">Đã sao chép liên kết gọi món!</span>
+                                  )}
+                                </div>
 
-                        {selectedTable.status === 'Cleaning' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Dọn dẹp bàn hoàn tất? Chuyển trạng thái bàn về Sẵn sàng đón khách.</p>
-                            <button 
-                              className="btn btn-primary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Available')}
-                            >
-                              <CheckCircle size={16} /> Hoàn Tất Dọn Dẹp (Sẵn Sàng)
-                            </button>
-                            <button 
-                              className="btn btn-danger w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                              <Wrench size={16} /> Chuyển Sang Bảo Trì
-                            </button>
-                          </div>
-                        )}
+                                <button 
+                                  className="btn btn-tertiary w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Cleaning')}
+                                >
+                                  <RefreshCw size={16} /> Chuyển dọn dẹp / Trống bàn
+                                </button>
+                              </div>
+                            )}
 
-                        {selectedTable.status === 'Inactive' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Bàn đang trong trạng thái bảo trì. Kích hoạt lại khi sửa chữa xong.</p>
-                            <button 
-                              className="btn btn-primary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Available')}
-                            >
-                              Kích Hoạt Hoạt Động Trở Lại
-                            </button>
+                            {selectedTable.status === 'Cleaning' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Dọn dẹp bàn hoàn tất? Chuyển trạng thái bàn về Sẵn sàng đón khách.</p>
+                                <button 
+                                  className="btn btn-primary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Available')}
+                                >
+                                  <CheckCircle size={16} /> Hoàn Tất Dọn Dẹp (Sẵn Sàng)
+                                </button>
+                                <button 
+                                  className="btn btn-danger w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  <Wrench size={16} /> Chuyển Sang Bảo Trì
+                                </button>
+                              </div>
+                            )}
+
+                            {selectedTable.status === 'Inactive' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Bàn đang trong trạng thái bảo trì. Kích hoạt lại khi sửa chữa xong.</p>
+                                <button 
+                                  className="btn btn-primary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Available')}
+                                >
+                                  Kích Hoạt Hoạt Động Trở Lại
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <div className="control-cardempty">
+                          <Calendar size={36} />
+                          <h3>Chưa Chọn Bàn</h3>
+                          <p>Vui lòng nhấp chọn một bàn bất kỳ trên sơ đồ để bắt đầu các tác vụ.</p>
+                        </div>
+                      )}
+
+                      {/* Serving food items update notification */}
+                      <div className="staff-serving-list-box">
+                        <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => i.status === 'Ready').length})</h3>
+                        <div className="serving-items-scroll">
+                          {orderItems.filter(i => i.status === 'Ready').length === 0 ? (
+                            <div className="empty-box-inline">Không có món ăn nào đang chờ phục vụ.</div>
+                          ) : (
+                            orderItems.filter(i => i.status === 'Ready').map(item => (
+                              <div key={item.id} className="serving-item-row">
+                                <div className="serving-item-meta">
+                                  <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
+                                  <span>{item.dishName} (x{item.quantity})</span>
+                                </div>
+                                <button 
+                                  className="btn-serve-item"
+                                  onClick={() => markItemAsServed(item.id)}
+                                >
+                                  <Check size={14} /> Giao
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="control-cardempty">
-                      <Calendar size={36} />
-                      <h3>Chưa Chọn Bàn</h3>
-                      <p>Vui lòng nhấp chọn một bàn bất kỳ trên sơ đồ để bắt đầu các tác vụ.</p>
-                    </div>
-                  )}
-
-                  {/* Serving food items update notification */}
-                  <div className="staff-serving-list-box">
-                    <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
-                    <div className="serving-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Ready')).length === 0 ? (
-                        <div className="empty-box-inline">Không có món ăn nào đang chờ phục vụ.</div>
-                      ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Ready')).map(item => (
-                          <div key={item.id} className="serving-item-row">
-                            <div className="serving-item-meta">
-                              <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
-                              <span>{item.dishName} (x{item.quantity})</span>
-                            </div>
-                            <button 
-                              className="btn-serve-item"
-                              onClick={() => markItemAsServed(item.id)}
+                  </div>
+                ) : (
+                  <div className="staff-reservations-container animate-fade-in" style={{ width: '100%' }}>
+                    <div className="res-search-header-panel">
+                      <div className="res-title-box">
+                        <h2>Tìm Kiếm & Check-in Khách Đặt Bàn</h2>
+                        <p>Danh sách các đơn đặt bàn trực tuyến từ Customer Web. Nhập tên hoặc SĐT để tìm kiếm nhanh.</p>
+                      </div>
+                      
+                      <div className="res-search-controls-row">
+                        <div className="search-input-wrap">
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            placeholder="🔍 Tìm theo tên khách hàng hoặc số điện thoại..."
+                            value={resSearchKeyword}
+                            onChange={(e) => setResSearchKeyword(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="res-status-filter-group">
+                          {(['All', 'Pending', 'CheckedIn', 'Cancelled'] as const).map(status => (
+                            <button
+                              key={status}
+                              className={`res-filter-pill ${resStatusFilter === status ? 'active' : ''}`}
+                              onClick={() => setResStatusFilter(status)}
                             >
-                              <Check size={14} /> Giao
+                              {status === 'All' && 'Tất Cả'}
+                              {status === 'Pending' && 'Chờ Check-in'}
+                              {status === 'CheckedIn' && 'Đã Nhận Bàn'}
+                              {status === 'Cancelled' && 'Đã Hủy'}
                             </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reservations List */}
+                    <div className="res-list-grid">
+                      {reservations
+                        .filter(r => {
+                          const matchesKeyword = r.name.toLowerCase().includes(resSearchKeyword.toLowerCase()) || 
+                                                 r.phone.includes(resSearchKeyword);
+                          const matchesStatus = resStatusFilter === 'All' ? true : r.status === resStatusFilter;
+                          return matchesKeyword && matchesStatus;
+                        })
+                        .length === 0 ? (
+                          <div className="empty-reservations-box">
+                            <Calendar size={48} />
+                            <h3>Không tìm thấy đơn đặt chỗ nào</h3>
+                            <p>Không có đơn đặt bàn nào khớp với điều kiện tìm kiếm hiện tại.</p>
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          reservations
+                            .filter(r => {
+                              const matchesKeyword = r.name.toLowerCase().includes(resSearchKeyword.toLowerCase()) || 
+                                                     r.phone.includes(resSearchKeyword);
+                              const matchesStatus = resStatusFilter === 'All' ? true : r.status === resStatusFilter;
+                              return matchesKeyword && matchesStatus;
+                            })
+                            .map(res => (
+                              <div key={res.id} className={`res-card-item status-${res.status.toLowerCase()}`}>
+                                <div className="res-card-header">
+                                  <div className="res-card-name-phone">
+                                    <h4>{res.name}</h4>
+                                    <span>📞 {res.phone}</span>
+                                  </div>
+                                  <span className={`res-badge badge-${res.status.toLowerCase()}`}>
+                                    {res.status === 'Pending' && 'Chờ Check-in'}
+                                    {res.status === 'CheckedIn' && 'Đã Nhận Bàn'}
+                                    {res.status === 'Cancelled' && 'Đã Hủy'}
+                                  </span>
+                                </div>
+                                
+                                <div className="res-card-body">
+                                  <div className="res-meta-grid">
+                                    <div className="res-meta-cell">
+                                      <span className="cell-label">Số Khách:</span>
+                                      <strong className="cell-val">{res.guests} Khách</strong>
+                                    </div>
+                                    <div className="res-meta-cell">
+                                      <span className="cell-label">Giờ Đặt:</span>
+                                      <strong className="cell-val">{res.time}</strong>
+                                    </div>
+                                  </div>
+                                  
+                                  {res.note && (
+                                    <div className="res-note-box">
+                                      <strong>Ghi chú:</strong> {res.note}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="res-card-actions">
+                                  {res.status === 'Pending' ? (
+                                    <>
+                                      {assigningResId === res.id ? (
+                                        <div className="assign-table-workflow">
+                                          <label className="assign-label">Chọn Bàn Trống Phù Hợp:</label>
+                                          <div className="assign-row">
+                                            <select 
+                                              className="form-input assign-select"
+                                              value={selectedTableIdForRes}
+                                              onChange={(e) => setSelectedTableIdForRes(e.target.value)}
+                                            >
+                                              <option value="">-- Chọn Bàn Trống --</option>
+                                              {tables
+                                                .filter(t => t.status === 'Available')
+                                                .map(t => (
+                                                  <option key={t.id} value={t.id}>
+                                                    {t.name} ({t.seats} Ghế - Khu {t.area === 'A' ? 'Sân Vườn' : t.area === 'B' ? 'VIP' : 'Sảnh'})
+                                                  </option>
+                                                ))}
+                                            </select>
+                                            
+                                            <button 
+                                              className="btn btn-primary btn-confirm-assign"
+                                              disabled={!selectedTableIdForRes}
+                                              onClick={() => {
+                                                checkInReservation(res.id, selectedTableIdForRes);
+                                                setAssigningResId(null);
+                                                setSelectedTableIdForRes('');
+                                              }}
+                                            >
+                                              Check-In
+                                            </button>
+                                            
+                                            <button 
+                                              className="btn btn-secondary btn-cancel-assign"
+                                              onClick={() => setAssigningResId(null)}
+                                            >
+                                              Hủy
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="res-action-btn-row">
+                                          <button 
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                              setAssigningResId(res.id);
+                                              setSelectedTableIdForRes('');
+                                            }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                          >
+                                            <CheckCircle size={15} /> Xếp Bàn & Check-in
+                                          </button>
+                                          <button 
+                                            className="btn btn-tertiary text-danger"
+                                            onClick={() => cancelReservation(res.id)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                          >
+                                            <AlertTriangle size={15} /> Hủy Đặt Chỗ
+                                          </button>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : res.status === 'CheckedIn' ? (
+                                    <div className="res-status-message success">
+                                      🎉 Khách đã nhận bàn phục vụ trơn tru.
+                                    </div>
+                                  ) : (
+                                    <div className="res-status-message danger">
+                                      ❌ Đơn đặt chỗ đã bị hủy.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        )}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

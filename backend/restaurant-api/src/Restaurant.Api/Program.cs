@@ -1,5 +1,6 @@
 using Restaurant.Application;
 using Restaurant.Infrastructure;
+using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Restaurant;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,8 @@ builder.Services.AddAuthentication();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ManagerOnly", policy =>
+        policy.RequireAuthenticatedUser());
+    options.AddPolicy("CashierOrManager", policy =>
         policy.RequireAuthenticatedUser());
 });
 
@@ -40,5 +43,8 @@ app.MapHealthChecks("/health");
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+
+// Billing module
+app.MapBillingEndpoints();
 
 app.Run();

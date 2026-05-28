@@ -340,6 +340,20 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
     return (sessionStorage.getItem('activeTab') as any) || 'home';
   });
+
+  // Hash-based tab navigation (Flow 33)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'tracker' || hash === 'menu' || hash === 'reservation' || hash === 'ai' || hash === 'home') {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
 

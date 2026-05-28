@@ -1354,7 +1354,8 @@ function App() {
                                 fontSize: '0.82rem', 
                                 minWidth: '60px',
                                 border: discountPercent === pct ? 'none' : '1px solid var(--border-color)',
-                                backgroundColor: discountPercent === pct ? 'var(--primary)' : 'var(--bg-deep)'
+                                backgroundColor: discountPercent === pct ? 'var(--primary)' : 'var(--bg-deep)',
+                                color: discountPercent === pct ? '#fff' : 'var(--text-primary)'
                               }}
                               onClick={() => setDiscountPercent(pct)}
                             >

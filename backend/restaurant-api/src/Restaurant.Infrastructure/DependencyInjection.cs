@@ -5,6 +5,8 @@ using Restaurant.Application.Features.Reservations.CheckIn;
 using Restaurant.Infrastructure.Data;
 using Restaurant.Infrastructure.Features.Menu.Categories;
 using Restaurant.Infrastructure.Features.Menu.Items;
+using Restaurant.Infrastructure.Features.Kitchen;
+using Restaurant.Infrastructure.Features.Orders;
 using Restaurant.Infrastructure.Features.Reservations.CheckIn;
 
 namespace Restaurant.Infrastructure;
@@ -39,6 +41,9 @@ public static class DependencyInjection
 
         services.AddScoped<IReservationCheckInStore, ReservationCheckInStore>();
         services.AddSingleton<ISessionTokenGenerator, SecureSessionTokenGenerator>();
+        services.AddScoped<CreateOrderHandler>();
+        services.AddScoped<GetKitchenOrderItemsHandler>();
+        services.AddScoped<UpdateKitchenOrderItemStatusHandler>();
 
         return services;
     }

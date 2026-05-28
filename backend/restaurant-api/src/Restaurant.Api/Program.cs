@@ -1,3 +1,6 @@
+using Restaurant.Api.Hubs;
+using Restaurant.Api.Modules.Kitchen;
+using Restaurant.Api.Modules.Ordering;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
@@ -9,6 +12,20 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendDev", policy =>
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5174")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
@@ -33,10 +50,12 @@ app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), appBuilder =
     appBuilder.UseHttpsRedirection();
 });
 
+app.UseCors("FrontendDev");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
+app.MapHub<RestaurantHub>("/hubs/restaurant");
 
 // Menu module
 app.MapMenuCategoriesEndpoints();
@@ -44,5 +63,9 @@ app.MapMenuItemsEndpoints();
 
 // Reservation module
 app.MapReservationCheckInEndpoints();
+
+// Ordering and Kitchen modules
+app.MapOrdersEndpoints();
+app.MapKitchenEndpoints();
 
 app.Run();

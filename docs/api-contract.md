@@ -615,6 +615,32 @@ Query:
 |---|---|---|
 | status | No | `Pending`, `Preparing`, `Ready` |
 
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "order-item-id",
+      "orderId": "order-id",
+      "orderCode": "ORD-0001",
+      "tableSessionId": "table-session-id",
+      "tableId": "table-id",
+      "tableNumber": "A01",
+      "menuItemId": "menu-item-id",
+      "menuItemName": "Lẩu Thái hải sản",
+      "unitPrice": 299000,
+      "quantity": 2,
+      "note": "Ít cay",
+      "status": "Pending",
+      "createdAt": "2026-06-01T12:30:00Z",
+      "updatedAt": "2026-06-01T12:30:00Z"
+    }
+  ]
+}
+```
+
 ### PATCH /api/v1/kitchen/order-items/{id}/status
 
 Cập nhật trạng thái món.
@@ -626,6 +652,30 @@ Request:
 ```json
 {
   "status": "Preparing"
+}
+```
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "order-item-id",
+    "orderId": "order-id",
+    "orderCode": "ORD-0001",
+    "tableSessionId": "table-session-id",
+    "tableId": "table-id",
+    "tableNumber": "A01",
+    "menuItemId": "menu-item-id",
+    "menuItemName": "Lẩu Thái hải sản",
+    "unitPrice": 299000,
+    "quantity": 2,
+    "note": "Ít cay",
+    "status": "Preparing",
+    "createdAt": "2026-06-01T12:30:00Z",
+    "updatedAt": "2026-06-01T12:35:00Z"
+  }
 }
 ```
 

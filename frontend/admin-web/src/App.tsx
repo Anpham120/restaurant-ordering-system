@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
@@ -8,6 +8,8 @@ import {
 import './App.css';
 
 // TypeScript interfaces for safety and robustness
+type AdminRole = 'Staff' | 'Kitchen' | 'Cashier' | 'Manager';
+
 interface Table {
   id: string;
   name: string;
@@ -29,13 +31,43 @@ interface Reservation {
 
 interface OrderItem {
   id: string;
+  orderId?: string;
+  orderCode?: string;
   tableId: string;
+  tableNumber?: string;
   dishName: string;
   quantity: number;
   note: string;
   status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
   timeAdded: string; // ISO string
 }
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+interface KitchenOrderItemDto {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  tableId: string;
+  tableNumber: string;
+  menuItemName: string;
+  quantity: number;
+  note: string | null;
+  status: OrderItem['status'];
+  createdAt: string;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7169';
+
+const getStoredAdminRole = (): AdminRole => {
+  const role = sessionStorage.getItem('admin_role');
+  return role === 'Staff' || role === 'Kitchen' || role === 'Cashier' || role === 'Manager'
+    ? role
+    : 'Staff';
+};
 
 interface InvoiceItem {
   dishName: string;
@@ -49,9 +81,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('admin_token') !== null;
   });
-  const [userRole, setUserRole] = useState<'Staff' | 'Kitchen' | 'Cashier' | 'Manager'>(() => {
-    return (sessionStorage.getItem('admin_role') as any) || 'Staff';
-  });
+  const [userRole, setUserRole] = useState<AdminRole>(getStoredAdminRole);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -79,7 +109,7 @@ function App() {
     { id: 'RES_003', name: 'Trần Minh Đức', phone: '0903334445', guests: 2, time: '17:30', note: 'Bàn sân vườn mát mẻ', status: 'Pending' },
   ]);
 
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([
+  const [orderItems, setOrderItems] = useState<OrderItem[]>(() => [
     { id: 'ORD_001', tableId: 'T102', dishName: 'Phở Bò Tày Đặc Biệt', quantity: 2, note: 'Ít bánh nhiều thịt, không hành', status: 'Preparing', timeAdded: new Date(Date.now() - 15 * 60000).toISOString() },
     { id: 'ORD_002', tableId: 'T102', dishName: 'Trà Đào Sả TV FOOD', quantity: 2, note: 'Ngọt 50%, nhiều đá', status: 'Ready', timeAdded: new Date(Date.now() - 10 * 60000).toISOString() },
     { id: 'ORD_003', tableId: 'T202', dishName: 'Bún Chả Nem Nướng', quantity: 3, note: 'Thêm nem nướng, nước mắm ấm', status: 'Pending', timeAdded: new Date(Date.now() - 5 * 60000).toISOString() },
@@ -114,6 +144,108 @@ function App() {
 
   // Realtime banner warning state
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
+
+  const mapKitchenOrderItem = (item: KitchenOrderItemDto): OrderItem => ({
+    id: item.id,
+    orderId: item.orderId,
+    orderCode: item.orderCode,
+    tableId: item.tableId,
+    tableNumber: item.tableNumber,
+    dishName: item.menuItemName,
+    quantity: item.quantity,
+    note: item.note ?? '',
+    status: item.status,
+    timeAdded: item.createdAt
+  });
+
+  const getTableLabel = (item: OrderItem) => {
+    if (item.tableNumber) return item.tableNumber;
+    return tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId;
+  };
+
+  const loadKitchenOrderItems = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/kitchen/order-items`, { signal });
+      if (!response.ok) throw new Error(`Kitchen API returned ${response.status}`);
+      const payload = await response.json() as ApiResponse<KitchenOrderItemDto[]>;
+      setOrderItems(payload.data.map(mapKitchenOrderItem));
+      setIsRealtimeConnected(true);
+    } catch {
+      if (!signal?.aborted) {
+        setIsRealtimeConnected(false);
+      }
+    }
+  }, []);
+
+  const connectRestaurantHub = useCallback(() => {
+    let socket: WebSocket | null = null;
+    let isStopped = false;
+    const realtimeEvents = new Set(['NewOrderCreated', 'OrderItemPreparing', 'OrderItemReady', 'OrderItemServed']);
+
+    const start = async () => {
+      try {
+        const negotiateResponse = await fetch(`${API_BASE_URL}/hubs/restaurant/negotiate?negotiateVersion=1`, {
+          method: 'POST'
+        });
+        if (!negotiateResponse.ok) throw new Error(`SignalR negotiate returned ${negotiateResponse.status}`);
+
+        const negotiate = await negotiateResponse.json() as { url?: string; accessToken?: string; connectionToken?: string };
+        const hubUrl = new URL(negotiate.url ?? `${API_BASE_URL}/hubs/restaurant`);
+        hubUrl.protocol = hubUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+        if (negotiate.connectionToken) hubUrl.searchParams.set('id', negotiate.connectionToken);
+        if (negotiate.accessToken) hubUrl.searchParams.set('access_token', negotiate.accessToken);
+
+        socket = new WebSocket(hubUrl);
+        socket.onopen = () => {
+          setIsRealtimeConnected(true);
+          socket?.send(`${JSON.stringify({ protocol: 'json', version: 1 })}\u001e`);
+        };
+        socket.onmessage = (event) => {
+          const frames = String(event.data).split('\u001e').filter(Boolean);
+          for (const frame of frames) {
+            const message = JSON.parse(frame) as { type?: number; target?: string };
+            if (message.type === 1 && message.target && realtimeEvents.has(message.target)) {
+              void loadKitchenOrderItems();
+            }
+          }
+        };
+        socket.onerror = () => setIsRealtimeConnected(false);
+        socket.onclose = () => {
+          setIsRealtimeConnected(false);
+          if (!isStopped) window.setTimeout(start, 5000);
+        };
+      } catch {
+        setIsRealtimeConnected(false);
+        if (!isStopped) window.setTimeout(start, 5000);
+      }
+    };
+
+    void start();
+
+    return {
+      stop: () => {
+        isStopped = true;
+        socket?.close();
+      }
+    };
+  }, [loadKitchenOrderItems]);
+
+  useEffect(() => {
+    if (!isAuthenticated || (userRole !== 'Kitchen' && userRole !== 'Manager')) return;
+
+    const controller = new AbortController();
+    window.setTimeout(() => void loadKitchenOrderItems(controller.signal), 0);
+    const connection = connectRestaurantHub();
+    const pollingId = window.setInterval(() => {
+      void loadKitchenOrderItems(controller.signal);
+    }, 15000);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(pollingId);
+      void connection.stop();
+    };
+  }, [connectRestaurantHub, isAuthenticated, loadKitchenOrderItems, userRole]);
 
   // Toggle Theme helper
   const toggleTheme = () => {
@@ -187,17 +319,33 @@ function App() {
   };
 
   // Advance Order Item status in Bếp Kanban column
-  const advanceOrderStatus = (itemId: string) => {
-    setOrderItems(prev => prev.map(item => {
+  const advanceOrderStatus = async (itemId: string) => {
+    const currentItem = orderItems.find(item => item.id === itemId);
+    if (!currentItem) return;
+
+    let nextStatus: OrderItem['status'] = 'Pending';
+    if (currentItem.status === 'Pending') nextStatus = 'Preparing';
+    else if (currentItem.status === 'Preparing') nextStatus = 'Ready';
+    else if (currentItem.status === 'Ready') nextStatus = 'Served';
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/kitchen/order-items/${itemId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus })
+      });
+
+      if (!response.ok) throw new Error(`Kitchen status API returned ${response.status}`);
+      await loadKitchenOrderItems();
+    } catch {
+      setIsRealtimeConnected(false);
+      setOrderItems(prev => prev.map(item => {
       if (item.id === itemId) {
-        let nextStatus: OrderItem['status'] = 'Pending';
-        if (item.status === 'Pending') nextStatus = 'Preparing';
-        else if (item.status === 'Preparing') nextStatus = 'Ready';
-        else if (item.status === 'Ready') nextStatus = 'Served';
         return { ...item, status: nextStatus };
       }
       return item;
     }));
+    }
   };
 
   // Directly Served order item (Staff role action)
@@ -318,7 +466,7 @@ function App() {
             <AlertTriangle size={18} />
             <span>Mất kết nối realtime với máy chủ (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng.</span>
           </div>
-          <button className="btn-reconnect" onClick={() => setIsRealtimeConnected(true)}>
+          <button className="btn-reconnect" onClick={() => void loadKitchenOrderItems()}>
             <RefreshCw size={14} /> Thử kết nối lại
           </button>
         </div>
@@ -392,7 +540,7 @@ function App() {
                   <select 
                     className="form-input" 
                     value={userRole} 
-                    onChange={(e) => setUserRole(e.target.value as any)}
+                    onChange={(e) => setUserRole(e.target.value as AdminRole)}
                   >
                     <option value="Staff">Nhân Viên Phục Vụ (Staff)</option>
                     <option value="Kitchen">Đầu Bếp / Bếp Trưởng (Kitchen)</option>
@@ -710,6 +858,9 @@ function App() {
                   </div>
 
                   <div className="panel-actions-group">
+                    <button className="btn btn-tertiary" onClick={() => void loadKitchenOrderItems()}>
+                      <RefreshCw size={16} /> Tải Lại Từ Bếp
+                    </button>
                     <button className="btn btn-tertiary" onClick={simulateIncomingOrder}>
                       <PlusCircle size={16} /> Giả Lập Order Mới
                     </button>
@@ -731,14 +882,14 @@ function App() {
                         orderItems.filter(i => itemStatusFilter(i, 'Pending')).map(item => (
                           <div key={item.id} className="kanban-item-card">
                             <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                              <span className="item-table-no">Bàn: {getTableLabel(item)}</span>
                               <span className="item-time-waiting">
                                 <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
                               </span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
                             <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                            {item.note && <div className="item-note-box">{item.note}</div>}
                             
                             <button 
                               className="btn btn-primary btn-advance w-full mt-10"
@@ -764,14 +915,14 @@ function App() {
                         orderItems.filter(i => itemStatusFilter(i, 'Preparing')).map(item => (
                           <div key={item.id} className="kanban-item-card card-preparing-active">
                             <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                              <span className="item-table-no">Bàn: {getTableLabel(item)}</span>
                               <span className="item-time-waiting">
                                 <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
                               </span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
                             <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                            {item.note && <div className="item-note-box">{item.note}</div>}
                             
                             <button 
                               className="btn btn-secondary btn-advance w-full mt-10"
@@ -797,7 +948,7 @@ function App() {
                         orderItems.filter(i => itemStatusFilter(i, 'Ready')).map(item => (
                           <div key={item.id} className="kanban-item-card card-ready-active">
                             <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                              <span className="item-table-no">Bàn: {getTableLabel(item)}</span>
                               <span className="item-time-waiting">Đã xong</span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
@@ -1178,8 +1329,8 @@ function App() {
                         <tbody>
                           {orderItems.map(item => (
                             <tr key={item.id}>
-                              <td><strong>{item.id}</strong></td>
-                              <td>{tables.find(t => t.id === item.tableId)?.name || item.tableId}</td>
+                              <td><strong>{item.orderCode || item.id}</strong></td>
+                              <td>{getTableLabel(item)}</td>
                               <td>{item.dishName}</td>
                               <td>x{item.quantity}</td>
                               <td>

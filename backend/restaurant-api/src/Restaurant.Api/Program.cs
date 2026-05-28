@@ -1,7 +1,11 @@
+using Restaurant.Api.Modules.Kitchen;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
+using Restaurant.Application.Modules.Kitchen.Interfaces;
+using Restaurant.Application.Modules.Kitchen.UseCases;
 using Restaurant.Infrastructure;
+using Restaurant.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +15,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+
+// Kitchen Module DI
+builder.Services.AddScoped<IKitchenRepository, KitchenRepository>();
+builder.Services.AddScoped<GetKitchenOrderItemsUseCase>();
+builder.Services.AddScoped<UpdateOrderItemStatusUseCase>();
 
 // Authorization – "ManagerOnly" policy placeholder (JWT wired in Issue #11)
 builder.Services.AddAuthentication();
@@ -44,5 +53,8 @@ app.MapMenuItemsEndpoints();
 
 // Reservation module
 app.MapReservationCheckInEndpoints();
+
+// Kitchen module
+app.MapKitchenEndpoints();
 
 app.Run();

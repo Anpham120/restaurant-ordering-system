@@ -144,6 +144,76 @@ function App() {
     document.body.classList.add('light-theme');
   }, []);
 
+  // Realtime bridge: Poll for incoming customer QR orders via shared cookie
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const cookieVal = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('tv_food_shared_orders='));
+      if (cookieVal) {
+        try {
+          const jsonStr = decodeURIComponent(cookieVal.split('=')[1]);
+          const incomingOrders = JSON.parse(jsonStr);
+          if (incomingOrders && incomingOrders.length > 0) {
+            incomingOrders.forEach((order: any) => {
+              // Convert and map the incoming order items to admin-web OrderItem structure
+              const newItems = order.items.map((item: any) => {
+                // Map the tableNumber to matching tableId or default
+                const tblNum = order.tableNumber || "A02";
+                let matchedTblId = "T102";
+                if (tblNum === "A01" || tblNum === "Bàn A101" || tblNum === "tbl-a01") matchedTblId = "T101";
+                else if (tblNum === "A02" || tblNum === "Bàn A102" || tblNum === "tbl-a02") matchedTblId = "T102";
+                else if (tblNum === "VIP B201" || tblNum === "tbl-b201") matchedTblId = "T201";
+                else if (tblNum === "VIP B202" || tblNum === "tbl-b202") matchedTblId = "T202";
+                else if (tblNum === "Bàn C302" || tblNum === "tbl-c302") matchedTblId = "T302";
+
+                return {
+                  id: item.id || `ORD_${Math.floor(100 + Math.random() * 900)}`,
+                  tableId: matchedTblId,
+                  dishName: item.menuItemName,
+                  quantity: item.quantity,
+                  note: item.note || 'Gọi món từ QR Khách Hàng',
+                  status: 'Pending',
+                  timeAdded: new Date().toISOString()
+                };
+              });
+
+              // Add to global orderItems state
+              setOrderItems(prev => [...newItems, ...prev]);
+
+              // Automatically set the target table status to Occupied
+              const tblNum = order.tableNumber || "A02";
+              let matchedTblId = "T102";
+              if (tblNum === "A01" || tblNum === "Bàn A101" || tblNum === "tbl-a01") matchedTblId = "T101";
+              else if (tblNum === "A02" || tblNum === "Bàn A102" || tblNum === "tbl-a02") matchedTblId = "T102";
+              else if (tblNum === "VIP B201" || tblNum === "tbl-b201") matchedTblId = "T201";
+              else if (tblNum === "VIP B202" || tblNum === "tbl-b202") matchedTblId = "T202";
+              else if (tblNum === "Bàn C302" || tblNum === "tbl-c302") matchedTblId = "T302";
+
+              setTables(prev => prev.map(t => t.id === matchedTblId ? { ...t, status: 'Occupied', currentSessionId: `sess_${matchedTblId}` } : t));
+
+              // Audio announcement feedback
+              try {
+                const utterance = new SpeechSynthesisUtterance(`Có đơn gọi món mới từ Bàn ${tblNum}`);
+                utterance.lang = 'vi-VN';
+                utterance.volume = 0.8;
+                window.speechSynthesis.speak(utterance);
+              } catch (soundErr) {
+                console.warn("Speech synthesis audio feedback blocked or unsupported", soundErr);
+              }
+            });
+
+            // Clear the shared orders cookie once synchronized
+            document.cookie = "tv_food_shared_orders=; path=/; max-age=0";
+          }
+        } catch (e) {
+          console.error("Error reading shared orders cookie", e);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Handle Auth Login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,6 +275,25 @@ function App() {
         if (item.status === 'Pending') nextStatus = 'Preparing';
         else if (item.status === 'Preparing') nextStatus = 'Ready';
         else if (item.status === 'Ready') nextStatus = 'Served';
+
+        // Realtime bridge: Save update to shared cookie for customer-web
+        const existingUpdatesCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('tv_food_order_status_updates='));
+        let statusUpdates = [];
+        if (existingUpdatesCookie) {
+          try {
+            statusUpdates = JSON.parse(decodeURIComponent(existingUpdatesCookie.split('=')[1]));
+          } catch (e) {
+            statusUpdates = [];
+          }
+        }
+        statusUpdates.push({
+          dishName: item.dishName,
+          status: nextStatus
+        });
+        document.cookie = `tv_food_order_status_updates=${encodeURIComponent(JSON.stringify(statusUpdates))}; path=/; max-age=86400`;
+
         return { ...item, status: nextStatus };
       }
       return item;
@@ -215,6 +304,24 @@ function App() {
   const markItemAsServed = (itemId: string) => {
     setOrderItems(prev => prev.map(item => {
       if (item.id === itemId) {
+        // Realtime bridge: Save Served update to shared cookie for customer-web
+        const existingUpdatesCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('tv_food_order_status_updates='));
+        let statusUpdates = [];
+        if (existingUpdatesCookie) {
+          try {
+            statusUpdates = JSON.parse(decodeURIComponent(existingUpdatesCookie.split('=')[1]));
+          } catch (e) {
+            statusUpdates = [];
+          }
+        }
+        statusUpdates.push({
+          dishName: item.dishName,
+          status: 'Served'
+        });
+        document.cookie = `tv_food_order_status_updates=${encodeURIComponent(JSON.stringify(statusUpdates))}; path=/; max-age=86400`;
+
         return { ...item, status: 'Served' };
       }
       return item;

@@ -1,7 +1,6 @@
-using Restaurant.Application.Modules.Kitchen.DTOs;
 using Restaurant.Domain.Entities;
 
-namespace Restaurant.Application.Modules.Kitchen.Interfaces;
+namespace Restaurant.Application.Features.Kitchen;
 
 public interface IKitchenRepository
 {

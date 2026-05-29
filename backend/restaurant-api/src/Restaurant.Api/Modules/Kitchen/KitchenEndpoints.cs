@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Restaurant.Application.Modules.Kitchen.DTOs;
-using Restaurant.Application.Modules.Kitchen.UseCases;
+using Restaurant.Application.Features.Kitchen;
 
 namespace Restaurant.Api.Modules.Kitchen;
 

@@ -2,12 +2,11 @@ using Restaurant.Api.Modules.Kitchen;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
-using Restaurant.Application.Modules.Kitchen.Interfaces;
-using Restaurant.Application.Modules.Kitchen.UseCases;
+using Restaurant.Application.Features.Kitchen;
 using Restaurant.Infrastructure;
+using Restaurant.Infrastructure.Features.Kitchen;
 using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Ordering;
-using Restaurant.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 

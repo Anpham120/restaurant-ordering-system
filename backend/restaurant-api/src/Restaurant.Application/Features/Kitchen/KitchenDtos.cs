@@ -1,4 +1,4 @@
-namespace Restaurant.Application.Modules.Kitchen.DTOs;
+namespace Restaurant.Application.Features.Kitchen;
 
 public record KitchenOrderItemDto(
     Guid Id,

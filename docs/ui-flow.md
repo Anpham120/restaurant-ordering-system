@@ -485,6 +485,10 @@ OrderItemPreparing
 OrderItemReady
 ```
 
+Rule realtime:
+
+- Khi Kitchen Display nhận `NewOrderCreated`, UI tải lại `GET /api/v1/kitchen/order-items` để món mới xuất hiện ngay trên bảng bếp.
+
 Màn hình cần có:
 
 - Cột hoặc filter theo `Pending`, `Preparing`, `Ready`.

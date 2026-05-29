@@ -1,69 +1,58 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Restaurant.Application.Features.Ordering.Orders;
-using Restaurant.Infrastructure.Features.Ordering.Orders;
+using Microsoft.AspNetCore.SignalR;
+using Restaurant.Api.Hubs;
+using Restaurant.Api.Modules.Reservation;
+using Restaurant.Application.Features.Orders;
+using Restaurant.Infrastructure.Features.Orders;
 
 namespace Restaurant.Api.Modules.Ordering;
 
 public static class OrdersEndpoints
 {
-    public static IEndpointRouteBuilder MapOrdersEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapOrdersEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = app.MapGroup("/api/v1/orders")
+        var group = endpoints.MapGroup("/api/v1/orders")
             .WithTags("Orders");
 
-        group.MapPost("/", async (
-            CreateOrderRequest request,
-            CreateOrderHandler handler,
-            CancellationToken ct) =>
-        {
-            try
-            {
-                var result = await handler.HandleAsync(request, ct);
-                var body = new { success = true, data = result.Order };
+        group.MapPost("/", CreateOrderAsync)
+            .WithName("CreateOrder")
+            .AllowAnonymous();
 
-                return result.IsDuplicateReplay
-                    ? Results.Ok(body)
-                    : Results.Created($"/api/v1/orders/{result.Order.Id}", body);
-            }
-            catch (OrderingValidationException ex)
-            {
-                return Results.BadRequest(new
-                {
-                    success = false,
-                    error = new { code = "VALIDATION_ERROR", message = ex.Message }
-                });
-            }
-            catch (OrderingNotFoundException ex)
-            {
-                return Results.NotFound(new
-                {
-                    success = false,
-                    error = new { code = "NOT_FOUND", message = ex.Message }
-                });
-            }
-            catch (IdempotencyConflictException ex)
-            {
-                return Results.Conflict(new
-                {
-                    success = false,
-                    error = new { code = "IDEMPOTENCY_CONFLICT", message = ex.Message }
-                });
-            }
-            catch (OrderingBusinessRuleException ex)
-            {
-                return Results.UnprocessableEntity(new
-                {
-                    success = false,
-                    error = new { code = "BUSINESS_RULE_VIOLATION", message = ex.Message }
-                });
-            }
-        })
-        .WithName("CreateOrder")
-        .AllowAnonymous();
-
-        return app;
+        return endpoints;
     }
-}
 
+    private static async Task<IResult> CreateOrderAsync(
+        CreateOrderRequest request,
+        CreateOrderHandler handler,
+        IHubContext<RestaurantHub> hubContext,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.SessionToken) ||
+            string.IsNullOrWhiteSpace(request.IdempotencyKey) ||
+            request.Items.Count == 0 ||
+            request.Items.Any(i => i.MenuItemId == Guid.Empty || i.Quantity <= 0))
+        {
+            return Error(
+                StatusCodes.Status400BadRequest,
+                "VALIDATION_ERROR",
+                "SessionToken, idempotencyKey và danh sách món hợp lệ là bắt buộc.",
+                httpContext.TraceIdentifier);
+        }
+
+        var result = await handler.HandleAsync(request, cancellationToken);
+        if (!result.IsSuccess)
+            return Error(result.StatusCode, result.ErrorCode!, result.ErrorMessage!, httpContext.TraceIdentifier);
+
+        await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
+            .SendAsync("NewOrderCreated", result.Event, cancellationToken);
+
+        return result.StatusCode == StatusCodes.Status201Created
+            ? TypedResults.Created($"/api/v1/orders/{result.Response!.Id}", new ApiResponse<OrderResponse>(true, result.Response))
+            : TypedResults.Ok(new ApiResponse<OrderResponse>(true, result.Response!));
+    }
+
+    private static IResult Error(int statusCode, string code, string message, string traceId) =>
+        TypedResults.Json(
+            new ApiErrorResponse(false, new ApiError(code, message, [], traceId)),
+            statusCode: statusCode);
+}

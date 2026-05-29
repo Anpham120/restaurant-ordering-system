@@ -1,60 +1,67 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Restaurant.Api.Hubs;
+using Restaurant.Api.Modules.Reservation;
 using Restaurant.Application.Features.Kitchen;
+using Restaurant.Infrastructure.Features.Kitchen;
 
 namespace Restaurant.Api.Modules.Kitchen;
 
-/// <summary>
-/// Endpoints cho Kitchen Module.
-/// GET   /api/v1/kitchen/order-items                — Kitchen, Manager
-/// PATCH /api/v1/kitchen/order-items/{id}/status    — Kitchen, Manager
-/// Theo docs/api-contract.md mục 12.
-/// </summary>
 public static class KitchenEndpoints
 {
-    public static IEndpointRouteBuilder MapKitchenEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapKitchenEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = app.MapGroup("/api/v1/kitchen").WithTags("Kitchen");
+        var group = endpoints.MapGroup("/api/v1/kitchen/order-items")
+            .WithTags("Kitchen");
 
-        // GET /api/v1/kitchen/order-items
-        group.MapGet("/order-items", async (
-            [FromQuery] string? status,
-            GetKitchenOrderItemsUseCase useCase,
-            CancellationToken ct) =>
+        group.MapGet("/", async (
+            string? status,
+            GetKitchenOrderItemsHandler handler,
+            CancellationToken cancellationToken) =>
         {
-            var items = await useCase.ExecuteAsync(status, ct);
-            return Results.Json(new { success = true, data = items });
+            var data = await handler.HandleAsync(status, cancellationToken);
+            return TypedResults.Ok(new ApiResponse<IReadOnlyCollection<KitchenOrderItemResponse>>(true, data));
         })
-        .RequireAuthorization(p => p.RequireRole("Kitchen", "Manager"))
-        .WithName("GetKitchenOrderItems")
-        .WithSummary("Danh sách món cho Kitchen Display (Kitchen, Manager)");
+        .WithName("GetKitchenOrderItems");
 
-        // PATCH /api/v1/kitchen/order-items/{id}/status
-        group.MapPatch("/order-items/{id:guid}/status", async (
-            Guid id,
-            [FromBody] UpdateOrderItemStatusRequest request,
-            UpdateOrderItemStatusUseCase useCase,
-            CancellationToken ct) =>
-        {
-            var result = await useCase.ExecuteAsync(id, request.Status, ct);
+        group.MapPatch("/{id:guid}/status", UpdateStatusAsync)
+            .WithName("UpdateKitchenOrderItemStatus");
 
-            if (!result.Success)
-            {
-                var statusCode = result.ErrorCode switch
-                {
-                    "NOT_FOUND" => 404,
-                    "VALIDATION_ERROR" => 400,
-                    "BUSINESS_RULE_VIOLATION" => 422,
-                    _ => 500
-                };
-                return Results.Json(new { success = false, error = new { code = result.ErrorCode, message = result.ErrorMessage } }, statusCode: statusCode);
-            }
-
-            return Results.Json(new { success = true, message = "Cập nhật trạng thái thành công" });
-        })
-        .RequireAuthorization(p => p.RequireRole("Kitchen", "Manager"))
-        .WithName("UpdateOrderItemStatus")
-        .WithSummary("Cập nhật trạng thái món (Kitchen, Manager)");
-
-        return app;
+        return endpoints;
     }
+
+    private static async Task<IResult> UpdateStatusAsync(
+        Guid id,
+        UpdateKitchenOrderItemStatusRequest request,
+        UpdateKitchenOrderItemStatusHandler handler,
+        IHubContext<RestaurantHub> hubContext,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(id, request, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return Error(result.StatusCode, result.ErrorCode!, result.ErrorMessage!, httpContext.TraceIdentifier);
+        }
+
+        var eventName = result.Event!.Status switch
+        {
+            "Preparing" => "OrderItemPreparing",
+            "Ready" => "OrderItemReady",
+            "Served" => "OrderItemServed",
+            _ => null,
+        };
+
+        if (eventName is not null)
+        {
+            await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
+                .SendAsync(eventName, result.Event, cancellationToken);
+        }
+
+        return TypedResults.Ok(new ApiResponse<KitchenOrderItemResponse>(true, result.Response!));
+    }
+
+    private static IResult Error(int statusCode, string code, string message, string traceId) =>
+        TypedResults.Json(
+            new ApiErrorResponse(false, new ApiError(code, message, [], traceId)),
+            statusCode: statusCode);
 }

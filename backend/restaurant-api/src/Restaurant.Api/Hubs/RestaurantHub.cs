@@ -1,36 +1,25 @@
 using Microsoft.AspNetCore.SignalR;
-using Restaurant.Application.Features.Orders;
 
 namespace Restaurant.Api.Hubs;
 
-/// <summary>
-/// SignalR hub for real-time restaurant events.
-/// Endpoint: /hubs/restaurant
-/// </summary>
-/// <remarks>
-/// Client groups:
-/// - "staff"   — Staff + Manager clients (receives OrderItemReady)
-/// - "kitchen" — Kitchen clients (future: receives new orders)
-/// </remarks>
 public sealed class RestaurantHub : Hub
 {
+    public const string KitchenDisplayGroup = "kitchen";
     private const string StaffGroup = "staff";
 
     public override async Task OnConnectedAsync()
     {
-        // Determine role from HTTP context claims (JWT or query-string token)
         var role = Context.User?.FindFirst(
             System.Security.Claims.ClaimTypes.Role)?.Value
             ?? Context.GetHttpContext()?.Request.Query["role"].ToString()
             ?? string.Empty;
 
-        // Add to appropriate group so server can broadcast to subsets
         var group = role.ToLowerInvariant() switch
         {
             "staff" or "manager" => StaffGroup,
-            "kitchen"            => "kitchen",
+            "kitchen"            => KitchenDisplayGroup,
             "cashier"            => "cashier",
-            _                    => StaffGroup   // default: treat as staff for safety
+            _                    => StaffGroup
         };
 
         await Groups.AddToGroupAsync(Context.ConnectionId, group);

@@ -8,7 +8,8 @@ using Restaurant.Infrastructure.Data;
 using Restaurant.Infrastructure.Features.Menu.Categories;
 using Restaurant.Infrastructure.Features.Menu.Items;
 using Restaurant.Infrastructure.Features.Billing;
-using Restaurant.Infrastructure.Features.Ordering.Orders;
+using Restaurant.Infrastructure.Features.Kitchen;
+using Restaurant.Infrastructure.Features.Orders;
 using Restaurant.Infrastructure.Features.Reservations;
 using Restaurant.Infrastructure.Features.Reservations.CheckIn;
 using Restaurant.Infrastructure.Features.Tables;
@@ -44,11 +45,13 @@ public static class DependencyInjection
         services.AddScoped<CreateMenuItemHandler>();
         services.AddScoped<UpdateMenuItemHandler>();
 
-        // Ordering handlers
-        services.AddScoped<CreateOrderHandler>();
-
         services.AddScoped<IReservationCheckInStore, ReservationCheckInStore>();
         services.AddSingleton<ISessionTokenGenerator, SecureSessionTokenGenerator>();
+
+        // Ordering + Kitchen handlers
+        services.AddScoped<CreateOrderHandler>();
+        services.AddScoped<GetKitchenOrderItemsHandler>();
+        services.AddScoped<UpdateKitchenOrderItemStatusHandler>();
 
         // Table repositories and use cases
         services.AddScoped<ITableRepository, TableRepository>();

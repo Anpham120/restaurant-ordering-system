@@ -353,16 +353,11 @@
 
 /* 4. Staff Dashboard (Sơ đồ bàn) styles */
 .staff-panel-layout {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   flex-grow: 1;
-}
-
-@media (max-width: 1024px) {
-  .staff-panel-layout {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
 }
 
 .table-map-section {
@@ -1763,3 +1758,481 @@ body.dark-theme .ai-empty-output {
   font-weight: 600;
   transition: all var(--transition-normal);
 }
+
+/* ==========================================================================
+   10. STAFF RESERVATIONS SEARCH & CHECK-IN VIEWS STYLING
+   ========================================================================== */
+.staff-sub-nav {
+  display: flex;
+  gap: 12px;
+  background-color: var(--bg-surface);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.staff-nav-tab {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.staff-nav-tab:hover {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+.staff-nav-tab.active {
+  background-color: var(--primary);
+  color: #ffffff !important;
+}
+
+/* Search Header Panel */
+.res-search-header-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.res-title-box h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.res-title-box p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.res-search-controls-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.search-input-wrap {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+}
+
+.search-input-wrap input {
+  width: 100%;
+  padding-left: 16px;
+  font-size: 0.95rem;
+}
+
+.res-status-filter-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.res-filter-pill {
+  background-color: var(--bg-deep);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.res-filter-pill:hover {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.res-filter-pill.active {
+  background-color: var(--primary-glow);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Grid layout for Reservation cards */
+.res-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.res-card-item {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  transition: all var(--transition-normal);
+  overflow: hidden;
+}
+
+.res-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Indicators on the left side of reservation cards */
+.res-card-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--text-muted);
+}
+
+.res-card-item.status-pending::before {
+  background-color: var(--accent); /* Orange reserved/pending indicator */
+}
+
+.res-card-item.status-checkedin::before {
+  background-color: var(--success); /* Green checked in */
+}
+
+.res-card-item.status-cancelled::before {
+  background-color: var(--danger); /* Red cancelled */
+}
+
+.res-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.res-card-name-phone h4 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.res-card-name-phone span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.res-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+}
+
+.res-badge.badge-pending {
+  background-color: var(--accent-glow);
+  color: var(--accent);
+}
+
+.res-badge.badge-checkedin {
+  background-color: var(--success-glow);
+  color: var(--success);
+}
+
+.res-badge.badge-cancelled {
+  background-color: var(--danger-glow);
+  color: var(--danger);
+}
+
+.res-card-body {
+  background-color: var(--bg-deep);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.res-meta-grid {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.res-meta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cell-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.cell-val {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.res-note-box {
+  font-size: 0.85rem;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 8px;
+  color: var(--text-muted);
+}
+
+/* Actions Block */
+.res-card-actions {
+  margin-top: auto;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  width: 100%;
+}
+
+.res-action-btn-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.res-action-btn-row button {
+  flex: 1;
+}
+
+/* Assign table workflow styled elegantly */
+.assign-table-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  animation: slideDown 0.25s ease-out;
+}
+
+.assign-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.assign-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.assign-select {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.btn-confirm-assign {
+  padding: 0 16px;
+  font-size: 0.85rem;
+}
+
+.btn-cancel-assign {
+  padding: 0 12px;
+  font-size: 0.85rem;
+}
+
+.res-status-message {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.res-status-message.success {
+  background-color: var(--success-glow);
+  color: var(--success);
+}
+
+.res-status-message.danger {
+  background-color: var(--danger-glow);
+  color: var(--danger);
+}
+
+/* Empty Reservations View */
+.empty-reservations-box {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  background-color: var(--bg-surface);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  gap: 12px;
+}
+
+.empty-reservations-box h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.empty-reservations-box p {
+  font-size: 0.9rem;
+  max-width: 320px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   11. MULTI-DEVICE RESPONSIVE LAYOUT OPTIMIZATIONS
+   ========================================================================== */
+.staff-map-container-row {
+  display: flex;
+  width: 100%;
+  gap: 24px;
+}
+
+.table-map-section {
+  flex: 2;
+  min-width: 0; /* Prevents flex items from overflowing */
+}
+
+.table-control-sidebar {
+  flex: 1;
+  min-width: 320px;
+}
+
+/* Tablet Screens (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .staff-map-container-row {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .table-map-section {
+    width: 100%;
+  }
+
+  .table-control-sidebar {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .res-list-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+/* Mobile Screens (max-width: 768px) */
+@media (max-width: 768px) {
+  .staff-sub-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: stretch;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .staff-nav-tab {
+    flex: 1;
+    min-width: calc(50% - 6px);
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .res-search-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .search-input-wrap {
+    min-width: 100%;
+  }
+
+  .res-status-filter-group {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .res-filter-pill {
+    flex: 1;
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    min-width: fit-content;
+  }
+
+  .res-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .res-badge {
+    align-self: flex-start;
+  }
+
+  .res-action-btn-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .res-action-btn-row button {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .assign-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .assign-select {
+    width: 100%;
+  }
+
+  .btn-confirm-assign,
+  .btn-cancel-assign {
+    width: 100%;
+    padding: 10px 16px;
+  }
+}
+
+

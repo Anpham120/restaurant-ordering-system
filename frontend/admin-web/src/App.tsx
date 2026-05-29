@@ -6,8 +6,6 @@ import {
   PlusCircle, ShoppingBag, Eye, Wrench
 } from 'lucide-react';
 import './App.css';
-import { createRestaurantHubConnection } from './realtime/restaurantRealtime';
-import type { OrderItemReadyEvent } from './realtime/restaurantRealtime';
 
 // TypeScript interfaces for safety and robustness
 interface Table {
@@ -27,18 +25,17 @@ interface Reservation {
   time: string;
   note: string;
   status: 'Pending' | 'CheckedIn' | 'Cancelled';
+  tableId?: string;
 }
 
 interface OrderItem {
   id: string;
-  orderId?: string;
   tableId: string;
   dishName: string;
   quantity: number;
   note: string;
   status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
   timeAdded: string; // ISO string
-  source?: 'mock' | 'realtime';
 }
 
 interface InvoiceItem {
@@ -47,47 +44,14 @@ interface InvoiceItem {
   price: number;
 }
 
-type UserRole = 'Staff' | 'Kitchen' | 'Cashier' | 'Manager';
-
-function isUserRole(value: string | null): value is UserRole {
-  return value === 'Staff' || value === 'Kitchen' || value === 'Cashier' || value === 'Manager';
-}
-
-function upsertReadyOrderItem(items: OrderItem[], event: OrderItemReadyEvent): OrderItem[] {
-  const existingIndex = items.findIndex(item => item.id === event.orderItemId);
-
-  if (existingIndex >= 0) {
-    return items.map(item => item.id === event.orderItemId ? {
-      ...item,
-      orderId: event.orderId,
-      status: 'Ready',
-      timeAdded: event.readyAt ?? item.timeAdded,
-      source: 'realtime',
-    } : item);
-  }
-
-  return [{
-    id: event.orderItemId,
-    orderId: event.orderId,
-    tableId: event.tableId ?? event.tableNumber ?? 'unknown',
-    dishName: event.menuItemName ?? `Món #${event.orderItemId}`,
-    quantity: event.quantity ?? 1,
-    note: event.note ?? '',
-    status: 'Ready',
-    timeAdded: event.readyAt ?? new Date().toISOString(),
-    source: 'realtime',
-  }, ...items];
-}
-
 function App() {
   // Theme & Role Authentication states
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('admin_token') !== null;
   });
-  const [userRole, setUserRole] = useState<UserRole>(() => {
-    const storedRole = sessionStorage.getItem('admin_role');
-    return isUserRole(storedRole) ? storedRole : 'Staff';
+  const [userRole, setUserRole] = useState<'Staff' | 'Kitchen' | 'Cashier' | 'Manager'>(() => {
+    return (sessionStorage.getItem('admin_role') as any) || 'Staff';
   });
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -113,10 +77,10 @@ function App() {
   const [reservations, setReservations] = useState<Reservation[]>([
     { id: 'RES_001', name: 'Nguyễn Văn Hùng', phone: '0987654321', guests: 4, time: '18:30', note: 'Gần cửa sổ, không cay nồng', status: 'Pending' },
     { id: 'RES_002', name: 'Phạm Thị Lan', phone: '0912345678', guests: 8, time: '19:00', note: 'Phòng VIP, tiệc sinh nhật', status: 'Pending' },
-    { id: 'RES_003', name: 'Trần Minh Đức', phone: '0903334445', guests: 2, time: '17:30', note: 'Bàn sân vườn mát mẻ', status: 'Pending' },
+    { id: 'RES_003', name: 'Trần Minh Đức', phone: '0903334445', guests: 2, time: '17:30', note: 'Bàn sân vườn mát mẻ', status: 'Pending', tableId: 'T103' },
   ]);
 
-  const [orderItems, setOrderItems] = useState<OrderItem[]>(() => [
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([
     { id: 'ORD_001', tableId: 'T102', dishName: 'Phở Bò Tày Đặc Biệt', quantity: 2, note: 'Ít bánh nhiều thịt, không hành', status: 'Preparing', timeAdded: new Date(Date.now() - 15 * 60000).toISOString() },
     { id: 'ORD_002', tableId: 'T102', dishName: 'Trà Đào Sả TV FOOD', quantity: 2, note: 'Ngọt 50%, nhiều đá', status: 'Ready', timeAdded: new Date(Date.now() - 10 * 60000).toISOString() },
     { id: 'ORD_003', tableId: 'T202', dishName: 'Bún Chả Nem Nướng', quantity: 3, note: 'Thêm nem nướng, nước mắm ấm', status: 'Pending', timeAdded: new Date(Date.now() - 5 * 60000).toISOString() },
@@ -143,25 +107,24 @@ function App() {
   const [billingTableId, setBillingTableId] = useState<string>('T102');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'BankTransfer'>('Cash');
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [paidInvoices, setPaidInvoices] = useState<any[]>([]);
+  const [selectedHistoricalInvoice, setSelectedHistoricalInvoice] = useState<any | null>(null);
 
   // Manager AI Operational Report states
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReportOutput, setAiReportOutput] = useState('');
   const [activeTab, setActiveTab] = useState<'metrics' | 'orders' | 'report'>('metrics');
 
-  // SignalR connection state for ready-item notifications.
-  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'reconnecting' | 'disconnected'>('disconnected');
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  const [lastReadyEvent, setLastReadyEvent] = useState<OrderItemReadyEvent | null>(null);
-  const realtimeRoleEnabled = isAuthenticated && (userRole === 'Staff' || userRole === 'Manager');
-  const isRealtimeConnected = realtimeStatus === 'connected';
+  // Realtime banner warning state
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
 
-  // Auto-dismiss the ready-event toast after 5 seconds
-  useEffect(() => {
-    if (!lastReadyEvent) return;
-    const timer = setTimeout(() => setLastReadyEvent(null), 5000);
-    return () => clearTimeout(timer);
-  }, [lastReadyEvent]);
+  // Staff Reservation Search & Check-in states
+  const [staffActiveTab, setStaffActiveTab] = useState<'map' | 'reservations'>('map');
+  const [resSearchKeyword, setResSearchKeyword] = useState('');
+  const [resStatusFilter, setResStatusFilter] = useState<'All' | 'Pending' | 'CheckedIn' | 'Cancelled'>('All');
+  const [assigningResId, setAssigningResId] = useState<string | null>(null);
+  const [selectedTableIdForRes, setSelectedTableIdForRes] = useState<string>('');
 
   // Toggle Theme helper
   const toggleTheme = () => {
@@ -180,47 +143,6 @@ function App() {
   useEffect(() => {
     document.body.classList.add('light-theme');
   }, []);
-
-  useEffect(() => {
-    if (!realtimeRoleEnabled) {
-      return;
-    }
-
-    let isDisposed = false;
-    const connection = createRestaurantHubConnection();
-
-    const handleReadyItem = (event: OrderItemReadyEvent) => {
-      setLastReadyEvent(event);
-      setOrderItems(prev => upsertReadyOrderItem(prev, event));
-    };
-
-    connection.on('OrderItemReady', handleReadyItem);
-    connection.onreconnecting(() => {
-      if (!isDisposed) setRealtimeStatus('reconnecting');
-    });
-    connection.onreconnected(() => {
-      if (!isDisposed) setRealtimeStatus('connected');
-      setReconnectAttempt(0); // reset counter after successful reconnect
-    });
-    connection.onclose(() => {
-      if (!isDisposed) setRealtimeStatus('disconnected');
-    });
-
-    setRealtimeStatus('connecting');
-    connection.start()
-      .then(() => {
-        if (!isDisposed) setRealtimeStatus('connected');
-      })
-      .catch(() => {
-        if (!isDisposed) setRealtimeStatus('disconnected');
-      });
-
-    return () => {
-      isDisposed = true;
-      connection.off('OrderItemReady', handleReadyItem);
-      void connection.stop();
-    };
-  }, [realtimeRoleEnabled, reconnectAttempt]);
 
   // Handle Auth Login
   const handleLogin = (e: React.FormEvent) => {
@@ -251,7 +173,6 @@ function App() {
     sessionStorage.removeItem('admin_role');
     setIsAuthenticated(false);
     setSelectedTable(null);
-    setRealtimeStatus('disconnected');
   };
 
   // Simulate incoming customer order in Kitchen display
@@ -303,7 +224,7 @@ function App() {
   // Check-in customer reservation at a selected table
   const checkInReservation = (resId: string, tableId: string) => {
     // 1. Update Reservation status
-    setReservations(prev => prev.map(r => r.id === resId ? { ...r, status: 'CheckedIn' } : r));
+    setReservations(prev => prev.map(r => r.id === resId ? { ...r, status: 'CheckedIn', tableId: tableId } : r));
     // 2. Change table status to Occupied
     setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'Occupied', currentSessionId: `sess_${Date.now()}` } : t));
     // 3. Clear local selections
@@ -311,6 +232,11 @@ function App() {
     if (selectedTable && selectedTable.id === tableId) {
       setSelectedTable(prev => prev ? { ...prev, status: 'Occupied' } : null);
     }
+  };
+
+  // Cancel reservation helper
+  const cancelReservation = (resId: string) => {
+    setReservations(prev => prev.map(r => r.id === resId ? { ...r, status: 'Cancelled' } : r));
   };
 
   // Clear or reset Table state back to Available
@@ -336,11 +262,36 @@ function App() {
 
   // Submit payment & clear active table session (Cashier Action)
   const executePayment = (tableId: string) => {
+    const items = getBillingItems(tableId);
+    const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const discountAmount = Math.round(subtotal * (discountPercent / 100));
+    const vat = Math.round((subtotal - discountAmount) * 0.08);
+    const grandTotal = subtotal - discountAmount + vat;
+    const invCode = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newInvoice = {
+      invoiceCode: invCode,
+      tableName: tables.find(t => t.id === tableId)?.name || tableId,
+      subtotal,
+      discount: discountAmount,
+      vat,
+      grandTotal,
+      paymentMethod,
+      paidAt: new Date().toLocaleTimeString('vi-VN'),
+      items
+    };
+
+    // Save invoice to local log history
+    setPaidInvoices(prev => [newInvoice, ...prev]);
+
     // Remove active orders for this table
     setOrderItems(prev => prev.filter(item => item.tableId !== tableId));
     // Set table state to Cleaning
     setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'Cleaning', currentSessionId: undefined } : t));
     
+    // Reset discount
+    setDiscountPercent(0);
+
     setIsPaidSuccess(true);
     setTimeout(() => {
       setIsPaidSuccess(false);
@@ -395,20 +346,21 @@ function App() {
 
   const currentBillingItems = getBillingItems(billingTableId);
   const billingSubtotal = currentBillingItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const billingTax = Math.round(billingSubtotal * 0.08); // 8% VAT
-  const billingGrandTotal = billingSubtotal + billingTax;
+  const billingDiscount = Math.round(billingSubtotal * (discountPercent / 100));
+  const billingTax = Math.round((billingSubtotal - billingDiscount) * 0.08); // 8% VAT
+  const billingGrandTotal = billingSubtotal - billingDiscount + billingTax;
 
   return (
     <div className="admin-app">
       
       {/* Realtime alerts fallback warning banner */}
-      {realtimeRoleEnabled && !isRealtimeConnected && (
+      {!isRealtimeConnected && (
         <div className="realtime-warning">
           <div className="warning-content">
             <AlertTriangle size={18} />
-            <span>Mất kết nối realtime với máy chủ (SignalR). Danh sách món chờ phục vụ vẫn hiển thị dữ liệu gần nhất.</span>
+            <span>Mất kết nối realtime với máy chủ (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng.</span>
           </div>
-          <button className="btn-reconnect" onClick={() => setReconnectAttempt(prev => prev + 1)}>
+          <button className="btn-reconnect" onClick={() => setIsRealtimeConnected(true)}>
             <RefreshCw size={14} /> Thử kết nối lại
           </button>
         </div>
@@ -431,12 +383,8 @@ function App() {
                 <span className={`role-pill pill-${userRole.toLowerCase()}`}>
                   <Layers size={13} /> {userRole}
                 </span>
-                <span className={`live-session-indicator live-${realtimeStatus}`}>
-                  <span className="indicator-glow"></span>
-                  {realtimeStatus === 'connected' && 'Live'}
-                  {realtimeStatus === 'connecting' && 'Connecting'}
-                  {realtimeStatus === 'reconnecting' && 'Reconnecting'}
-                  {realtimeStatus === 'disconnected' && 'Offline'}
+                <span className="live-session-indicator">
+                  <span className="indicator-glow"></span> Live
                 </span>
               </div>
 
@@ -486,11 +434,7 @@ function App() {
                   <select 
                     className="form-input" 
                     value={userRole} 
-                    onChange={(e) => {
-                      if (isUserRole(e.target.value)) {
-                        setUserRole(e.target.value);
-                      }
-                    }}
+                    onChange={(e) => setUserRole(e.target.value as any)}
                   >
                     <option value="Staff">Nhân Viên Phục Vụ (Staff)</option>
                     <option value="Kitchen">Đầu Bếp / Bếp Trưởng (Kitchen)</option>
@@ -558,289 +502,496 @@ function App() {
             {/* 1. STAFF ROLE DASHBOARD */}
             {userRole === 'Staff' && (
               <div className="staff-panel-layout">
-                
-                {/* Left Side: Sơ đồ bàn (Table Map) */}
-                <div className="table-map-section">
-                  <div className="panel-header-row">
-                    <div className="panel-title-group">
-                      <h2>Sơ Đồ Bàn Phục Vụ</h2>
-                      <p>Nhấp chọn bàn để kiểm tra trạng thái hoặc Check-in cho khách đặt trước.</p>
-                    </div>
-
-                    <div className="area-tabs-filter">
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'All' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('All')}
-                      >
-                        Tất Cả ({tables.length})
-                      </button>
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'A' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('A')}
-                      >
-                        Sân Vườn (Khu A)
-                      </button>
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'B' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('B')}
-                      >
-                        Phòng VIP (Khu B)
-                      </button>
-                      <button 
-                        className={`area-filter-tab ${selectedArea === 'C' ? 'active' : ''}`}
-                        onClick={() => setSelectedArea('C')}
-                      >
-                        Sảnh Chính (Khu C)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Table Grid displaying 12px rounded cards */}
-                  <div className="table-grid-display">
-                    {tables
-                      .filter(t => selectedArea === 'All' ? true : t.area === selectedArea)
-                      .map(table => (
-                        <div 
-                          key={table.id}
-                          className={`table-card-item card-status-${table.status.toLowerCase()} ${selectedTable?.id === table.id ? 'active' : ''}`}
-                          onClick={() => setSelectedTable(table)}
-                        >
-                          <div className="table-card-seats">{table.seats} Chỗ</div>
-                          <h3 className="table-card-title">{table.name}</h3>
-                          <span className={`table-status-label status-${table.status.toLowerCase()}`}>
-                            {table.status === 'Available' && 'Còn Trống'}
-                            {table.status === 'Reserved' && 'Được Đặt'}
-                            {table.status === 'Occupied' && 'Có Khách'}
-                            {table.status === 'Cleaning' && 'Đang Dọn'}
-                            {table.status === 'Inactive' && 'Bảo Trì'}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* Color Guide Status */}
-                  <div className="table-status-guide">
-                    <span className="guide-item"><span className="dot dot-available"></span> Còn trống</span>
-                    <span className="guide-item"><span className="dot dot-reserved"></span> Đã đặt chỗ</span>
-                    <span className="guide-item"><span className="dot dot-occupied"></span> Đang có khách</span>
-                    <span className="guide-item"><span className="dot dot-cleaning"></span> Đang dọn bàn</span>
-                    <span className="guide-item"><span className="dot dot-inactive"></span> Bảo trì</span>
-                  </div>
+                {/* Staff Sub-navigation Tabs */}
+                <div className="staff-sub-nav">
+                  <button 
+                    className={`staff-nav-tab ${staffActiveTab === 'map' ? 'active' : ''}`}
+                    onClick={() => setStaffActiveTab('map')}
+                  >
+                    🗺️ Sơ Đồ Bàn Phục Vụ
+                  </button>
+                  <button 
+                    className={`staff-nav-tab ${staffActiveTab === 'reservations' ? 'active' : ''}`}
+                    onClick={() => {
+                      setStaffActiveTab('reservations');
+                      setAssigningResId(null);
+                      setResSearchKeyword('');
+                    }}
+                  >
+                    📅 Tìm Kiếm & Check-in Đặt Chỗ
+                  </button>
                 </div>
 
-                {/* Right Side: Table Detail & Check-in Control */}
-                <div className="table-control-sidebar">
-                  {selectedTable ? (
-                    <div className="control-card">
-                      <div className="control-card-header">
-                        <h3>Thông Tin {selectedTable.name}</h3>
-                        <span className="badge-seats">{selectedTable.seats} Ghế ngồi</span>
+                {staffActiveTab === 'map' ? (
+                  <div className="staff-map-container-row">
+                    {/* Left Side: Sơ đồ bàn (Table Map) */}
+                    <div className="table-map-section">
+                      <div className="panel-header-row">
+                        <div className="panel-title-group">
+                          <h2>Sơ Đồ Bàn Phục Vụ</h2>
+                          <p>Nhấp chọn bàn để kiểm tra trạng thái hoặc Check-in cho khách đặt trước.</p>
+                        </div>
+
+                        <div className="area-tabs-filter">
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'All' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('All')}
+                          >
+                            Tất Cả ({tables.length})
+                          </button>
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'A' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('A')}
+                          >
+                            Sân Vườn (Khu A)
+                          </button>
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'B' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('B')}
+                          >
+                            Phòng VIP (Khu B)
+                          </button>
+                          <button 
+                            className={`area-filter-tab ${selectedArea === 'C' ? 'active' : ''}`}
+                            onClick={() => setSelectedArea('C')}
+                          >
+                            Sảnh Chính (Khu C)
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="control-table-status-block">
-                        <span className="status-label-prefix">Trạng thái hiện tại:</span>
-                        <span className={`status-pill pill-${selectedTable.status.toLowerCase()}`}>
-                          {selectedTable.status}
-                        </span>
-                      </div>
-
-                      {/* Action options depending on table status */}
-                      <div className="control-action-options">
-                        {selectedTable.status === 'Available' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Khách vãng lai vừa ngồi vào bàn này? Chuyển sang Có Khách để khách tự gọi món qua QR.</p>
-                            <button 
-                              className="btn btn-primary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Occupied')}
+                      {/* Table Grid displaying 12px rounded cards */}
+                      <div className="table-grid-display">
+                        {tables
+                          .filter(t => selectedArea === 'All' ? true : t.area === selectedArea)
+                          .map(table => (
+                            <div 
+                              key={table.id}
+                              className={`table-card-item card-status-${table.status.toLowerCase()} ${selectedTable?.id === table.id ? 'active' : ''}`}
+                              onClick={() => setSelectedTable(table)}
                             >
-                              <Play size={16} /> Mở Phiên Phục Vụ
-                            </button>
-                            <button 
-                              className="btn btn-tertiary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Reserved')}
-                            >
-                              <Calendar size={16} /> Chuyển Sang Đã Đặt
-                            </button>
-                            <button 
-                              className="btn btn-danger w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                              <Wrench size={16} /> Chuyển Sang Bảo Trì
-                            </button>
-                          </div>
-                        )}
-
-                        {selectedTable.status === 'Reserved' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Khách đặt chỗ đã đến? Chọn khách đặt trước từ danh sách dưới đây để hoàn tất Check-in.</p>
-                            
-                            <div className="quick-reservation-select-box">
-                              <label className="form-label">Chọn khách check-in:</label>
-                              <select 
-                                className="form-input"
-                                onChange={(e) => {
-                                  const res = reservations.find(r => r.id === e.target.value);
-                                  if (res) setSelectedReservation(res);
-                                }}
-                              >
-                                <option value="">-- Chọn Đơn Đặt Chỗ --</option>
-                                {reservations.filter(r => r.status === 'Pending').map(r => (
-                                  <option key={r.id} value={r.id}>
-                                    {r.name} ({r.guests} khách - {r.time})
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="table-card-seats">{table.seats} Chỗ</div>
+                              <h3 className="table-card-title">{table.name}</h3>
+                              <span className={`table-status-label status-${table.status.toLowerCase()}`}>
+                                {table.status === 'Available' && 'Còn Trống'}
+                                {table.status === 'Reserved' && 'Được Đặt'}
+                                {table.status === 'Occupied' && 'Có Khách'}
+                                {table.status === 'Cleaning' && 'Đang Dọn'}
+                                {table.status === 'Inactive' && 'Bảo Trì'}
+                              </span>
                             </div>
+                          ))}
+                      </div>
 
-                            {selectedReservation && (
-                              <div className="selected-res-preview">
-                                <strong>Khách:</strong> {selectedReservation.name}<br />
-                                <strong>Điện thoại:</strong> {selectedReservation.phone}<br />
-                                <strong>Thời gian:</strong> {selectedReservation.time}<br />
-                                <strong>Ghi chú:</strong> {selectedReservation.note || 'Không có'}<br />
+                      {/* Color Guide Status */}
+                      <div className="table-status-guide">
+                        <span className="guide-item"><span className="dot dot-available"></span> Còn trống</span>
+                        <span className="guide-item"><span className="dot dot-reserved"></span> Đã đặt chỗ</span>
+                        <span className="guide-item"><span className="dot dot-occupied"></span> Đang có khách</span>
+                        <span className="guide-item"><span className="dot dot-cleaning"></span> Đang dọn bàn</span>
+                        <span className="guide-item"><span className="dot dot-inactive"></span> Bảo trì</span>
+                      </div>
+                    </div>
+
+                    {/* Right Side: Table Detail & Check-in Control */}
+                    <div className="table-control-sidebar">
+                      {selectedTable ? (
+                        <div className="control-card">
+                          <div className="control-card-header">
+                            <h3>Thông Tin {selectedTable.name}</h3>
+                            <span className="badge-seats">{selectedTable.seats} Ghế ngồi</span>
+                          </div>
+
+                          <div className="control-table-status-block">
+                            <span className="status-label-prefix">Trạng thái hiện tại:</span>
+                            <span className={`status-pill pill-${selectedTable.status.toLowerCase()}`}>
+                              {selectedTable.status}
+                            </span>
+                          </div>
+
+                          {/* Matching Reservation Customer Preview */}
+                          {(() => {
+                            const matchingRes = reservations.find(r => r.tableId === selectedTable.id && (r.status === 'CheckedIn' || r.status === 'Pending'));
+                            if (matchingRes) {
+                              const isPending = matchingRes.status === 'Pending';
+                              return (
+                                <div className="table-customer-card" style={{
+                                  backgroundColor: isPending ? 'var(--accent-glow)' : 'var(--primary-glow)',
+                                  border: `1px solid ${isPending ? 'var(--accent)' : 'var(--primary)'}`,
+                                  borderRadius: 'var(--radius-sm)',
+                                  padding: '12px 16px',
+                                  marginBottom: '16px',
+                                  textAlign: 'left'
+                                }}>
+                                  <h4 style={{ 
+                                    margin: '0 0 8px 0', 
+                                    fontSize: '0.9rem', 
+                                    color: isPending ? 'var(--accent)' : 'var(--primary)', 
+                                    textTransform: 'uppercase', 
+                                    fontWeight: 800 
+                                  }}>
+                                    {isPending ? '📅 Đơn Đặt Trước (Chờ Check-in)' : '👤 Khách Hàng Tại Bàn (Đã Check-in)'}
+                                  </h4>
+                                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-primary)' }}>
+                                    <div><strong>Họ tên:</strong> {matchingRes.name}</div>
+                                    <div><strong>Điện thoại:</strong> {matchingRes.phone}</div>
+                                    <div><strong>Số khách:</strong> {matchingRes.guests} người</div>
+                                    <div><strong>Giờ đặt:</strong> {matchingRes.time}</div>
+                                    {matchingRes.note && <div><strong>Ghi chú:</strong> {matchingRes.note}</div>}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
+
+                          {/* Action options depending on table status */}
+                          <div className="control-action-options">
+                            {selectedTable.status === 'Available' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Khách vãng lai vừa ngồi vào bàn này? Chuyển sang Có Khách để khách tự gọi món qua QR.</p>
                                 <button 
-                                  className="btn btn-primary w-full mt-10"
-                                  onClick={() => checkInReservation(selectedReservation.id, selectedTable.id)}
+                                  className="btn btn-primary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Occupied')}
                                 >
-                                  <CheckCircle size={16} /> Xác Nhận Check-In
+                                  <Play size={16} /> Mở Phiên Phục Vụ
+                                </button>
+                                <button 
+                                  className="btn btn-tertiary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Reserved')}
+                                >
+                                  <Calendar size={16} /> Chuyển Sang Đã Đặt
+                                </button>
+                                <button 
+                                  className="btn btn-danger w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  <Wrench size={16} /> Chuyển Sang Bảo Trì
                                 </button>
                               </div>
                             )}
 
-                            <button 
-                              className="btn btn-danger w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                              <Wrench size={16} /> Chuyển Sang Bảo Trì
-                            </button>
-                          </div>
-                        )}
+                            {selectedTable.status === 'Reserved' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Khách đặt chỗ đã đến? Chọn khách đặt trước từ danh sách dưới đây để hoàn tất Check-in.</p>
+                                
+                                <div className="quick-reservation-select-box">
+                                  <label className="form-label">Chọn khách check-in:</label>
+                                  <select 
+                                    className="form-input"
+                                    onChange={(e) => {
+                                      const res = reservations.find(r => r.id === e.target.value);
+                                      if (res) setSelectedReservation(res);
+                                    }}
+                                  >
+                                    <option value="">-- Chọn Đơn Đặt Chỗ --</option>
+                                    {reservations.filter(r => r.status === 'Pending').map(r => (
+                                      <option key={r.id} value={r.id}>
+                                        {r.name} ({r.guests} khách - {r.time})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
 
-                        {selectedTable.status === 'Occupied' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Bàn đang có khách. Bạn có thể sao chép và gửi URL đặt món QR trực tiếp tại bàn này.</p>
-                            
-                            <div className="qr-url-box">
-                              <span className="qr-label">URL Gọi Món QR:</span>
-                              <div className="qr-input-row">
-                                <input 
-                                  type="text" 
-                                  readOnly 
-                                  className="form-input text-ellipsis" 
-                                  value={`${window.location.protocol}//${window.location.host}/?table=${selectedTable.id}&session=sess_${selectedTable.id}`}
-                                />
+                                {selectedReservation && (
+                                  <div className="selected-res-preview">
+                                    <strong>Khách:</strong> {selectedReservation.name}<br />
+                                    <strong>Điện thoại:</strong> {selectedReservation.phone}<br />
+                                    <strong>Thời gian:</strong> {selectedReservation.time}<br />
+                                    <strong>Ghi chú:</strong> {selectedReservation.note || 'Không có'}<br />
+                                    <button 
+                                      className="btn btn-primary w-full mt-10"
+                                      onClick={() => checkInReservation(selectedReservation.id, selectedTable.id)}
+                                    >
+                                      <CheckCircle size={16} /> Xác Nhận Check-In
+                                    </button>
+                                  </div>
+                                )}
+
                                 <button 
-                                  className="btn btn-primary btn-copy" 
-                                  onClick={() => copyQRUrl(selectedTable.id)}
+                                  className="btn btn-danger w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
-                                  {copiedUrl === selectedTable.id ? <Check size={16} /> : <Copy size={16} />}
+                                  <Wrench size={16} /> Chuyển Sang Bảo Trì
                                 </button>
                               </div>
-                              {copiedUrl === selectedTable.id && (
-                                <span className="copy-success-message">Đã sao chép liên kết gọi món!</span>
-                              )}
-                            </div>
+                            )}
 
-                            <button 
-                              className="btn btn-tertiary w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Cleaning')}
-                            >
-                              <RefreshCw size={16} /> Chuyển dọn dẹp / Trống bàn
-                            </button>
+                            {selectedTable.status === 'Occupied' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Bàn đang có khách. Bạn có thể sao chép và gửi URL đặt món QR trực tiếp tại bàn này.</p>
+                                
+                                <div className="qr-url-box">
+                                  <span className="qr-label">URL Gọi Món QR:</span>
+                                  <div className="qr-input-row">
+                                    <input 
+                                      type="text" 
+                                      readOnly 
+                                      className="form-input text-ellipsis" 
+                                      value={`${window.location.protocol}//${window.location.host}/?table=${selectedTable.id}&session=sess_${selectedTable.id}`}
+                                    />
+                                    <button 
+                                      className="btn btn-primary btn-copy" 
+                                      onClick={() => copyQRUrl(selectedTable.id)}
+                                    >
+                                      {copiedUrl === selectedTable.id ? <Check size={16} /> : <Copy size={16} />}
+                                    </button>
+                                  </div>
+                                  {copiedUrl === selectedTable.id && (
+                                    <span className="copy-success-message">Đã sao chép liên kết gọi món!</span>
+                                  )}
+                                </div>
+
+                                <button 
+                                  className="btn btn-tertiary w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Cleaning')}
+                                >
+                                  <RefreshCw size={16} /> Chuyển dọn dẹp / Trống bàn
+                                </button>
+                              </div>
+                            )}
+
+                            {selectedTable.status === 'Cleaning' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Dọn dẹp bàn hoàn tất? Chuyển trạng thái bàn về Sẵn sàng đón khách.</p>
+                                <button 
+                                  className="btn btn-primary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Available')}
+                                >
+                                  <CheckCircle size={16} /> Hoàn Tất Dọn Dẹp (Sẵn Sàng)
+                                </button>
+                                <button 
+                                  className="btn btn-danger w-full mt-10"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                  <Wrench size={16} /> Chuyển Sang Bảo Trì
+                                </button>
+                              </div>
+                            )}
+
+                            {selectedTable.status === 'Inactive' && (
+                              <div className="action-vertical-box">
+                                <p className="action-hint">Bàn đang trong trạng thái bảo trì. Kích hoạt lại khi sửa chữa xong.</p>
+                                <button 
+                                  className="btn btn-primary w-full"
+                                  onClick={() => changeTableStatus(selectedTable.id, 'Available')}
+                                >
+                                  Kích Hoạt Hoạt Động Trở Lại
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
-
-                        {selectedTable.status === 'Cleaning' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Dọn dẹp bàn hoàn tất? Chuyển trạng thái bàn về Sẵn sàng đón khách.</p>
-                            <button 
-                              className="btn btn-primary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Available')}
-                            >
-                              <CheckCircle size={16} /> Hoàn Tất Dọn Dẹp (Sẵn Sàng)
-                            </button>
-                            <button 
-                              className="btn btn-danger w-full mt-10"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                              <Wrench size={16} /> Chuyển Sang Bảo Trì
-                            </button>
-                          </div>
-                        )}
-
-                        {selectedTable.status === 'Inactive' && (
-                          <div className="action-vertical-box">
-                            <p className="action-hint">Bàn đang trong trạng thái bảo trì. Kích hoạt lại khi sửa chữa xong.</p>
-                            <button 
-                              className="btn btn-primary w-full"
-                              onClick={() => changeTableStatus(selectedTable.id, 'Available')}
-                            >
-                              Kích Hoạt Hoạt Động Trở Lại
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="control-cardempty">
-                      <Calendar size={36} />
-                      <h3>Chưa Chọn Bàn</h3>
-                      <p>Vui lòng nhấp chọn một bàn bất kỳ trên sơ đồ để bắt đầu các tác vụ.</p>
-                    </div>
-                  )}
-
-                  {/* Serving food items update notification */}
-                  <div className="staff-serving-list-box">
-                    <div className="serving-header-row">
-                      <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
-                      <span className={`serving-realtime-badge badge-${realtimeStatus}`}>
-                        {realtimeStatus === 'connected' && 'SignalR'}
-                        {realtimeStatus === 'connecting' && 'Đang nối'}
-                        {realtimeStatus === 'reconnecting' && 'Nối lại'}
-                        {realtimeStatus === 'disconnected' && 'Mất nối'}
-                      </span>
-                    </div>
-                    {lastReadyEvent && (
-                      <div className="ready-event-toast">
-                        <CheckCircle size={14} />
-                        <span>
-                          {lastReadyEvent.tableNumber
-                            ? `Bàn ${lastReadyEvent.tableNumber}: `
-                            : lastReadyEvent.tableId
-                            ? `Bàn ${lastReadyEvent.tableId}: `
-                            : ''}
-                          <strong>
-                            {lastReadyEvent.menuItemName ?? `Món #${lastReadyEvent.orderItemId}`}
-                          </strong>{lastReadyEvent.quantity && lastReadyEvent.quantity > 1 ? ` ×${lastReadyEvent.quantity}` : ''} đã sẵn sàng phục vụ!
-                        </span>
-                      </div>
-                    )}
-                    <div className="serving-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Ready')).length === 0 ? (
-                        <div className="empty-box-inline">Không có món ăn nào đang chờ phục vụ.</div>
+                        </div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Ready')).map(item => (
-                          <div key={item.id} className="serving-item-row">
-                            <div className="serving-item-meta">
-                              <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
-                              <span>{item.dishName} (x{item.quantity})</span>
-                              {item.source === 'realtime' && <small>🔴 Realtime</small>}
-                            </div>
-                            <button 
-                              className="btn-serve-item"
-                              onClick={() => markItemAsServed(item.id)}
-                            >
-                              <Check size={14} /> Giao
-                            </button>
-                          </div>
-                        ))
+                        <div className="control-cardempty">
+                          <Calendar size={36} />
+                          <h3>Chưa Chọn Bàn</h3>
+                          <p>Vui lòng nhấp chọn một bàn bất kỳ trên sơ đồ để bắt đầu các tác vụ.</p>
+                        </div>
                       )}
+
+                      {/* Serving food items update notification */}
+                      <div className="staff-serving-list-box">
+                        <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => i.status === 'Ready').length})</h3>
+                        <div className="serving-items-scroll">
+                          {orderItems.filter(i => i.status === 'Ready').length === 0 ? (
+                            <div className="empty-box-inline">Không có món ăn nào đang chờ phục vụ.</div>
+                          ) : (
+                            orderItems.filter(i => i.status === 'Ready').map(item => (
+                              <div key={item.id} className="serving-item-row">
+                                <div className="serving-item-meta">
+                                  <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
+                                  <span>{item.dishName} (x{item.quantity})</span>
+                                </div>
+                                <button 
+                                  className="btn-serve-item"
+                                  onClick={() => markItemAsServed(item.id)}
+                                >
+                                  <Check size={14} /> Giao
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="staff-reservations-container animate-fade-in" style={{ width: '100%' }}>
+                    <div className="res-search-header-panel">
+                      <div className="res-title-box">
+                        <h2>Tìm Kiếm & Check-in Khách Đặt Bàn</h2>
+                        <p>Danh sách các đơn đặt bàn trực tuyến từ Customer Web. Nhập tên hoặc SĐT để tìm kiếm nhanh.</p>
+                      </div>
+                      
+                      <div className="res-search-controls-row">
+                        <div className="search-input-wrap">
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            placeholder="🔍 Tìm theo tên khách hàng hoặc số điện thoại..."
+                            value={resSearchKeyword}
+                            onChange={(e) => setResSearchKeyword(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="res-status-filter-group">
+                          {(['All', 'Pending', 'CheckedIn', 'Cancelled'] as const).map(status => (
+                            <button
+                              key={status}
+                              className={`res-filter-pill ${resStatusFilter === status ? 'active' : ''}`}
+                              onClick={() => setResStatusFilter(status)}
+                            >
+                              {status === 'All' && 'Tất Cả'}
+                              {status === 'Pending' && 'Chờ Check-in'}
+                              {status === 'CheckedIn' && 'Đã Nhận Bàn'}
+                              {status === 'Cancelled' && 'Đã Hủy'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reservations List */}
+                    <div className="res-list-grid">
+                      {reservations
+                        .filter(r => {
+                          const matchesKeyword = r.name.toLowerCase().includes(resSearchKeyword.toLowerCase()) || 
+                                                 r.phone.includes(resSearchKeyword);
+                          const matchesStatus = resStatusFilter === 'All' ? true : r.status === resStatusFilter;
+                          return matchesKeyword && matchesStatus;
+                        })
+                        .length === 0 ? (
+                          <div className="empty-reservations-box">
+                            <Calendar size={48} />
+                            <h3>Không tìm thấy đơn đặt chỗ nào</h3>
+                            <p>Không có đơn đặt bàn nào khớp với điều kiện tìm kiếm hiện tại.</p>
+                          </div>
+                        ) : (
+                          reservations
+                            .filter(r => {
+                              const matchesKeyword = r.name.toLowerCase().includes(resSearchKeyword.toLowerCase()) || 
+                                                     r.phone.includes(resSearchKeyword);
+                              const matchesStatus = resStatusFilter === 'All' ? true : r.status === resStatusFilter;
+                              return matchesKeyword && matchesStatus;
+                            })
+                            .map(res => (
+                              <div key={res.id} className={`res-card-item status-${res.status.toLowerCase()}`}>
+                                <div className="res-card-header">
+                                  <div className="res-card-name-phone">
+                                    <h4>{res.name}</h4>
+                                    <span>📞 {res.phone}</span>
+                                  </div>
+                                  <span className={`res-badge badge-${res.status.toLowerCase()}`}>
+                                    {res.status === 'Pending' && 'Chờ Check-in'}
+                                    {res.status === 'CheckedIn' && 'Đã Nhận Bàn'}
+                                    {res.status === 'Cancelled' && 'Đã Hủy'}
+                                  </span>
+                                </div>
+                                
+                                <div className="res-card-body">
+                                  <div className="res-meta-grid">
+                                    <div className="res-meta-cell">
+                                      <span className="cell-label">Số Khách:</span>
+                                      <strong className="cell-val">{res.guests} Khách</strong>
+                                    </div>
+                                    <div className="res-meta-cell">
+                                      <span className="cell-label">Giờ Đặt:</span>
+                                      <strong className="cell-val">{res.time}</strong>
+                                    </div>
+                                  </div>
+                                  
+                                  {res.note && (
+                                    <div className="res-note-box">
+                                      <strong>Ghi chú:</strong> {res.note}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="res-card-actions">
+                                  {res.status === 'Pending' ? (
+                                    <>
+                                      {assigningResId === res.id ? (
+                                        <div className="assign-table-workflow">
+                                          <label className="assign-label">Chọn Bàn Trống Phù Hợp:</label>
+                                          <div className="assign-row">
+                                            <select 
+                                              className="form-input assign-select"
+                                              value={selectedTableIdForRes}
+                                              onChange={(e) => setSelectedTableIdForRes(e.target.value)}
+                                            >
+                                              <option value="">-- Chọn Bàn Trống --</option>
+                                              {tables
+                                                .filter(t => t.status === 'Available')
+                                                .map(t => (
+                                                  <option key={t.id} value={t.id}>
+                                                    {t.name} ({t.seats} Ghế - Khu {t.area === 'A' ? 'Sân Vườn' : t.area === 'B' ? 'VIP' : 'Sảnh'})
+                                                  </option>
+                                                ))}
+                                            </select>
+                                            
+                                            <button 
+                                              className="btn btn-primary btn-confirm-assign"
+                                              disabled={!selectedTableIdForRes}
+                                              onClick={() => {
+                                                checkInReservation(res.id, selectedTableIdForRes);
+                                                setAssigningResId(null);
+                                                setSelectedTableIdForRes('');
+                                              }}
+                                            >
+                                              Check-In
+                                            </button>
+                                            
+                                            <button 
+                                              className="btn btn-secondary btn-cancel-assign"
+                                              onClick={() => setAssigningResId(null)}
+                                            >
+                                              Hủy
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="res-action-btn-row">
+                                          <button 
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                              setAssigningResId(res.id);
+                                              setSelectedTableIdForRes('');
+                                            }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                          >
+                                            <CheckCircle size={15} /> Xếp Bàn & Check-in
+                                          </button>
+                                          <button 
+                                            className="btn btn-tertiary text-danger"
+                                            onClick={() => cancelReservation(res.id)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                          >
+                                            <AlertTriangle size={15} /> Hủy Đặt Chỗ
+                                          </button>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : res.status === 'CheckedIn' ? (
+                                    <div className="res-status-message success">
+                                      🎉 Khách đã nhận bàn phục vụ trơn tru.
+                                    </div>
+                                  ) : (
+                                    <div className="res-status-message danger">
+                                      ❌ Đơn đặt chỗ đã bị hủy.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -967,14 +1118,37 @@ function App() {
             {userRole === 'Cashier' && (
               <div className="cashier-panel-layout">
                 
-                {/* Left side: occupied tables list */}
-                <div className="occupied-tables-sidebar">
-                  <div className="sidebar-title-box">
-                    <h2>Bàn Đang Hoạt Động</h2>
-                    <p>Chọn bàn có phiên sử dụng để in hóa đơn và thanh toán.</p>
+                {/* Left side: occupied tables list & history logs */}
+                <div className="occupied-tables-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '850px' }}>
+                  <div className="sidebar-title-box" style={{ marginBottom: '8px', paddingBottom: '8px' }}>
+                    <h2>Thu Ngân & Thanh Toán</h2>
+                    <p>Chọn bàn có phiên hoạt động hoặc xem lịch sử ca làm việc.</p>
                   </div>
 
-                  <div className="occupied-tables-scroll">
+                  {/* Active Tables Search input */}
+                  <div className="search-active-tables-box" style={{ marginBottom: '10px' }}>
+                    <input 
+                      type="text"
+                      className="form-input"
+                      placeholder="🔍 Tìm bàn đang hoạt động..."
+                      style={{ fontSize: '0.85rem', padding: '10px 14px' }}
+                      id="cashier-table-search"
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase();
+                        const tiles = document.querySelectorAll('.occupied-table-tile');
+                        tiles.forEach(tile => {
+                          const text = tile.textContent?.toLowerCase() || '';
+                          if (text.includes(val)) {
+                            (tile as HTMLElement).style.display = 'flex';
+                          } else {
+                            (tile as HTMLElement).style.display = 'none';
+                          }
+                        });
+                      }}
+                    />
+                  </div>
+
+                  <div className="occupied-tables-scroll" style={{ flexGrow: 1, maxHeight: '350px' }}>
                     {tables.filter(t => t.status === 'Occupied').length === 0 ? (
                       <div className="empty-box-inline">Không có bàn nào đang có khách.</div>
                     ) : (
@@ -982,16 +1156,91 @@ function App() {
                         <div 
                           key={table.id}
                           className={`occupied-table-tile ${billingTableId === table.id ? 'active' : ''}`}
-                          onClick={() => setBillingTableId(table.id)}
+                          onClick={() => {
+                            setBillingTableId(table.id);
+                            setDiscountPercent(0); // Reset discount when switching table
+                          }}
                         >
                           <div className="occupied-tile-meta">
                             <strong>{table.name}</strong>
                             <span>{getBillingItems(table.id).length} Món ăn đã gọi</span>
                           </div>
+                          {orderItems.some(i => i.tableId === table.id && i.status !== 'Served') && (
+                            <span className="unserved-warn-dot" title="Còn món chưa phục vụ" style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: 'var(--accent)',
+                              display: 'inline-block',
+                              marginLeft: '8px',
+                              boxShadow: '0 0 6px var(--accent)'
+                            }}></span>
+                          )}
                           <ChevronRight size={16} />
                         </div>
                       ))
                     )}
+                  </div>
+
+                  {/* Historical Invoices section */}
+                  <div className="invoice-history-box" style={{ 
+                    borderTop: '1px solid var(--border-color)', 
+                    paddingTop: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    flexGrow: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🧾 Lịch Sử Hóa Đơn ({paidInvoices.length})
+                    </h3>
+                    
+                    <div className="invoice-history-scroll" style={{ 
+                      overflowY: 'auto', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px',
+                      maxHeight: '300px'
+                    }}>
+                      {paidInvoices.length === 0 ? (
+                        <div className="empty-box-inline" style={{ fontSize: '0.8rem', padding: '16px' }}>
+                          Chưa xuất hóa đơn nào trong ca.
+                        </div>
+                      ) : (
+                        paidInvoices.map((inv, idx) => (
+                          <div 
+                            key={idx}
+                            style={{
+                              backgroundColor: 'var(--bg-deep)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '10px 14px',
+                              textAlign: 'left',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <strong style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>{inv.invoiceCode}</strong>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{inv.tableName}</div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{inv.paidAt} - {inv.paymentMethod === 'Cash' ? 'Tiền mặt' : 'Ck'}</span>
+                            </div>
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                              <strong style={{ fontSize: '0.88rem' }}>{inv.grandTotal.toLocaleString()}đ</strong>
+                              <button 
+                                className="btn btn-tertiary"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto', minHeight: 'unset' }}
+                                onClick={() => setSelectedHistoricalInvoice(inv)}
+                              >
+                                Xem
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1014,6 +1263,51 @@ function App() {
                           <span>Giờ in: {new Date().toLocaleTimeString('vi-VN')}</span>
                         </div>
                       </div>
+
+                      {/* Business rule validation warning & quick serve button */}
+                      {(() => {
+                        const unserved = orderItems.filter(i => i.tableId === billingTableId && i.status !== 'Served');
+                        if (unserved.length > 0) {
+                          return (
+                            <div className="business-rule-warning-alert" style={{
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              border: '1px dashed var(--accent)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '16px',
+                              marginBottom: '20px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px',
+                              textAlign: 'left'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent)' }}>
+                                <AlertTriangle size={20} />
+                                <strong style={{ fontSize: '0.92rem' }}>CẢNH BÁO NGHIỆP VỤ: Còn {unserved.length} món chưa được phục vụ!</strong>
+                              </div>
+                              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                Để tuân thủ API contract & quy định của hệ thống TV FOOD, bàn không được phép thanh toán khi vẫn còn món đang chuẩn bị hoặc sẵn sàng trong bếp.
+                              </p>
+                              <div style={{ display: 'flex', gap: '10px' }}>
+                                <button 
+                                  className="btn btn-tertiary text-danger"
+                                  style={{ padding: '6px 12px', fontSize: '0.8rem', height: 'auto', minHeight: 'unset', width: 'auto' }}
+                                  onClick={() => {
+                                    setOrderItems(prev => prev.map(item => {
+                                      if (item.tableId === billingTableId) {
+                                        return { ...item, status: 'Served' };
+                                      }
+                                      return item;
+                                    }));
+                                  }}
+                                >
+                                  ⚡ Xác Nhận Phục Vụ Nhanh Tất Cả Món
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       {/* Billing Items list table */}
                       <div className="invoice-table-container">
@@ -1045,12 +1339,44 @@ function App() {
                         </table>
                       </div>
 
+                      {/* Discount coupons row selector */}
+                      <div className="discount-selector-box" style={{ marginBottom: '20px', textAlign: 'left' }}>
+                        <span className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>
+                          🎫 Chương trình ưu đãi / Giảm giá (Coupon):
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {([0, 5, 10, 15, 20] as const).map(pct => (
+                            <button
+                              key={pct}
+                              className={`btn ${discountPercent === pct ? 'btn-primary' : 'btn-secondary'}`}
+                              style={{ 
+                                padding: '8px 16px', 
+                                fontSize: '0.82rem', 
+                                minWidth: '60px',
+                                border: discountPercent === pct ? 'none' : '1px solid var(--border-color)',
+                                backgroundColor: discountPercent === pct ? 'var(--primary)' : 'var(--bg-deep)',
+                                color: discountPercent === pct ? '#fff' : 'var(--text-primary)'
+                              }}
+                              onClick={() => setDiscountPercent(pct)}
+                            >
+                              {pct === 0 ? 'Không giảm' : `${pct}%`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Summary prices calculations */}
                       <div className="invoice-price-summary">
                         <div className="summary-row">
                           <span>Tạm tính (chưa thuế):</span>
                           <span>{billingSubtotal.toLocaleString()}đ</span>
                         </div>
+                        {billingDiscount > 0 && (
+                          <div className="summary-row" style={{ color: 'var(--accent)' }}>
+                            <span>Giảm giá ({discountPercent}%):</span>
+                            <span>-{billingDiscount.toLocaleString()}đ</span>
+                          </div>
+                        )}
                         <div className="summary-row">
                           <span>Thuế VAT (8%):</span>
                           <span>{billingTax.toLocaleString()}đ</span>
@@ -1109,7 +1435,12 @@ function App() {
                       <div className="invoice-actions-footer">
                         <button 
                           className="btn btn-primary w-full"
+                          disabled={orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served')}
                           onClick={() => executePayment(billingTableId)}
+                          style={{
+                            opacity: orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served') ? 0.5 : 1,
+                            cursor: orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served') ? 'not-allowed' : 'pointer'
+                          }}
                         >
                           Xác Nhận Đã Thu Tiền & Giải Phóng Bàn
                         </button>
@@ -1409,6 +1740,105 @@ function App() {
           <p>© {new Date().getFullYear()} TV FOOD Admin Portal. Được cung cấp bởi Giải Pháp Quản Lý Nhà Hàng Monolith.</p>
         </div>
       </footer>
+
+      {/* Historical Invoices Overlay Modal */}
+      {selectedHistoricalInvoice && (
+        <div className="historical-invoice-modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div className="invoice-box-card" style={{
+            width: '500px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '24px',
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div className="invoice-header" style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--primary-glow)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '4px', fontWeight: 700 }}>
+                  ĐÃ THANH TOÁN ({selectedHistoricalInvoice.paymentMethod === 'Cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN'})
+                </span>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '4px 12px', fontSize: '0.8rem', height: 'auto', minHeight: 'unset' }}
+                  onClick={() => setSelectedHistoricalInvoice(null)}
+                >
+                  Đóng
+                </button>
+              </div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0' }}>CHI TIẾT HÓA ĐƠN ĐÃ LƯU</h3>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div>Mã hóa đơn: <strong>{selectedHistoricalInvoice.invoiceCode}</strong></div>
+                <div>Bàn phục vụ: <strong>{selectedHistoricalInvoice.tableName}</strong></div>
+                <div>Thời gian in: {selectedHistoricalInvoice.paidAt}</div>
+              </div>
+            </div>
+
+            <table className="invoice-data-table" style={{ width: '100%', marginBottom: '16px' }}>
+              <thead>
+                <tr>
+                  <th>Món ăn</th>
+                  <th>SL</th>
+                  <th>Đơn giá</th>
+                  <th className="text-right">Tổng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedHistoricalInvoice.items.map((item: any, idx: number) => (
+                  <tr key={idx}>
+                    <td>{item.dishName}</td>
+                    <td>x{item.quantity}</td>
+                    <td>{item.price.toLocaleString()}đ</td>
+                    <td className="text-right">{(item.price * item.quantity).toLocaleString()}đ</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="invoice-price-summary" style={{ backgroundColor: 'var(--bg-deep)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
+              <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
+                <span>Tạm tính:</span>
+                <span>{selectedHistoricalInvoice.subtotal.toLocaleString()}đ</span>
+              </div>
+              {selectedHistoricalInvoice.discount > 0 && (
+                <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px', color: 'var(--accent)' }}>
+                  <span>Khuyến mãi:</span>
+                  <span>-{selectedHistoricalInvoice.discount.toLocaleString()}đ</span>
+                </div>
+              )}
+              <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
+                <span>Thuế VAT (8%):</span>
+                <span>{selectedHistoricalInvoice.vat.toLocaleString()}đ</span>
+              </div>
+              <div className="summary-row grand-total-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)', borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '6px' }}>
+                <span>Tổng cộng:</span>
+                <span>{selectedHistoricalInvoice.grandTotal.toLocaleString()}đ</span>
+              </div>
+            </div>
+            
+            <button 
+              className="btn btn-secondary w-full"
+              style={{ marginTop: '16px' }}
+              onClick={() => setSelectedHistoricalInvoice(null)}
+            >
+              Đóng Cửa Sổ
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

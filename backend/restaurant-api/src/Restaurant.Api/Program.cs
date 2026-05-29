@@ -6,6 +6,8 @@ using Restaurant.Api.Services;
 using Restaurant.Application;
 using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure;
+using Restaurant.Api.Modules.Billing;
+using Restaurant.Api.Modules.Ordering;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +51,8 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ManagerOnly", policy =>
         policy.RequireAuthenticatedUser());
+    options.AddPolicy("CashierOrManager", policy =>
+        policy.RequireRole("Cashier", "Manager"));
 });
 
 var app = builder.Build();
@@ -81,6 +85,7 @@ app.MapHub<RestaurantHub>("/hubs/restaurant")
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+app.MapOrdersEndpoints();
 
 // Table module
 app.MapTableEndpoints();
@@ -89,6 +94,9 @@ app.MapTableEndpoints();
 app.MapReservationCheckInEndpoints();
 app.MapReservationEndpoints();
 app.MapTableSessionEndpoints();
+
+// Billing module
+app.MapBillingEndpoints();
 
 // Order module
 app.MapOrderItemEndpoints();

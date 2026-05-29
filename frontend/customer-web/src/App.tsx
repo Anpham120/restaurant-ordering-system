@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Utensils,
   Calendar,
@@ -32,6 +32,9 @@ import {
   Cookie
 } from 'lucide-react';
 import './App.css';
+import { useOrderTracking } from './hooks/useOrderTracking';
+import type { ApiOrder, ApiResponse, Order, OrderItem } from './types/orderTracking';
+import { mapApiOrder } from './utils/orderTracking';
 
 // -------------------------------------------------------------
 // TYPES & CONTRACT ALIGNED SCHEMAS
@@ -77,23 +80,9 @@ interface TableSession {
   openedAt: string;
 }
 
-interface OrderItem {
-  id: string;
-  menuItemName: string;
-  quantity: number;
-  unitPrice: number;
-  status: 'Pending' | 'Preparing' | 'Ready' | 'Served' | 'Cancelled';
-  note?: string;
-}
-
-interface Order {
-  orderId: string;
-  orderCode: string;
-  tableNumber: string;
-  status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
-  items: OrderItem[];
-  placedAt: Date;
-}
+type ActiveTab = 'home' | 'menu' | 'reservation' | 'tracker' | 'ai';
+type DishSize = 'S' | 'M' | 'L' | 'XL';
+type DrinkTemperature = 'Nóng' | 'Đá';
 
 interface ChatMessage {
   id: string;
@@ -229,12 +218,23 @@ const CATEGORIES = [
   { id: "cat-dessert", name: "Tráng Miệng", emoji: "🍰" }
 ];
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
 const getBadgeClass = (tag: string): string => {
   const t = tag.toLowerCase();
   if (t.includes('cay')) return 'badge-danger';
   if (t.includes('bán chạy') || t.includes('được thích') || t.includes('đặc sản')) return 'badge-primary';
   if (t.includes('healthy') || t.includes('thanh đạm') || t.includes('khai vị') || t.includes('thanh nhiệt') || t.includes('thanh mát')) return 'badge-success';
   return 'badge-warning';
+};
+
+const createIdempotencyKey = () => {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const isActiveTab = (value: string | null): value is ActiveTab => {
+  return value === 'home' || value === 'menu' || value === 'reservation' || value === 'tracker' || value === 'ai';
 };
 
 export function App() {
@@ -252,11 +252,13 @@ export function App() {
   }, [theme]);
 
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
-    return (sessionStorage.getItem('activeTab') as any) || 'home';
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const savedTab = sessionStorage.getItem('activeTab');
+    return isActiveTab(savedTab) ? savedTab : 'home';
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
+
 
   // Search & Filters
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -279,8 +281,8 @@ export function App() {
   const [dishNotes, setDishNotes] = useState("");
   const [dishQuantity, setDishQuantity] = useState(1);
   // Starbucks custom PDP states
-  const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
-  const [selectedTemperature, setSelectedTemperature] = useState<'Nóng' | 'Đá'>('Đá');
+  const [selectedSize, setSelectedSize] = useState<DishSize>('M');
+  const [selectedTemperature, setSelectedTemperature] = useState<DrinkTemperature>('Đá');
   const [selectedSweetness, setSelectedSweetness] = useState<string>('70%');
   const [extraToppings, setExtraToppings] = useState<{ [key: string]: number }>({
     'Trân Châu Hoàng Kim': 0,
@@ -290,7 +292,6 @@ export function App() {
 
   // App Core Simulated Database States
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [placedOrders, setPlacedOrders] = useState<Order[]>([]);
   const [latestReservation, setLatestReservation] = useState<Reservation | null>(null);
 
   // Reservation Form State
@@ -323,6 +324,15 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Custom Order Tracking Hook
+  const {
+    placedOrders,
+    addPlacedOrder,
+    realtimeStatus,
+    realtimeMessage,
+    lastRealtimeAt
+  } = useOrderTracking(sessionToken, tableSession?.tableNumber || 'A01', triggerToast);
+
   // Synchronization to sessionStorage to survive page reloads
   useEffect(() => {
     sessionStorage.setItem('activeTab', activeTab);
@@ -349,63 +359,30 @@ export function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('sessionToken');
     if (token) {
-      handleLoadTableSession(token);
+      sessionStorage.setItem('sessionToken', token);
+      const mockSession: TableSession = {
+        id: "sess_" + Math.random().toString(36).substr(2, 9),
+        tableId: "tbl-a01",
+        tableNumber: "A01",
+        status: "Active",
+        openedAt: new Date().toISOString()
+      };
+      sessionStorage.setItem('tableSession', JSON.stringify(mockSession));
+      window.setTimeout(() => {
+        setSessionToken(token);
+        setTableSession(mockSession);
+        setActiveTab('menu');
+      }, 0);
     }
     // Diagnostic log utilizing reservations to prevent TS unused warning
     console.log(`Hệ thống Antigravity sẵn sàng. Đã tải ${reservations.length} đặt bàn cục bộ.`);
-  }, [reservations]);
-
+  }, [reservations.length]);
   // -------------------------------------------------------------
-  // SIMULATION: SIGNALR REALTIME UPDATES SIMULATOR (Flow 3.4)
-  // -------------------------------------------------------------
-  useEffect(() => {
-    if (placedOrders.length === 0) return;
-
-    const interval = setInterval(() => {
-      setPlacedOrders(prevOrders => {
-        let updated = false;
-        const newOrders = prevOrders.map(order => {
-          if (order.status === 'Served') return order;
-
-          let nextStatus: 'Pending' | 'Preparing' | 'Ready' | 'Served' = order.status;
-          let nextItems = [...order.items];
-
-          if (order.status === 'Pending') {
-            nextStatus = 'Preparing';
-            nextItems = order.items.map(it => ({ ...it, status: 'Preparing' }));
-            updated = true;
-          } else if (order.status === 'Preparing') {
-            nextStatus = 'Ready';
-            nextItems = order.items.map(it => ({ ...it, status: 'Ready' }));
-            updated = true;
-          } else if (order.status === 'Ready') {
-            nextStatus = 'Served';
-            nextItems = order.items.map(it => ({ ...it, status: 'Served' }));
-            updated = true;
-            triggerToast(`Món ngon của bạn đã sẵn sàng! Nhân viên đang phục vụ lên Bàn ${order.tableNumber}.`);
-          }
-
-          return {
-            ...order,
-            status: nextStatus,
-            items: nextItems
-          };
-        });
-
-        if (updated) {
-          return newOrders;
-        }
-        return prevOrders;
-      });
-    }, 12000);
-
-    return () => clearInterval(interval);
-  }, [placedOrders]);
 
   // -------------------------------------------------------------
   // ACTIONS: LOADING TABLE SESSION
   // -------------------------------------------------------------
-  const handleLoadTableSession = (token: string) => {
+  function handleLoadTableSession(token: string) {
     sessionStorage.setItem('sessionToken', token);
     const mockSession: TableSession = {
       id: "sess_" + Math.random().toString(36).substr(2, 9),
@@ -423,7 +400,7 @@ export function App() {
 
     const cleanUrl = window.location.pathname + `?sessionToken=${token}`;
     window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-  };
+  }
 
   const handleSimulateQRScan = () => {
     const randomToken = "secure-qr-session-token-" + Math.floor(1000 + Math.random() * 9000);
@@ -549,9 +526,56 @@ export function App() {
   // -------------------------------------------------------------
   // ACTIONS: ORDER SUBMISSION (POST /api/v1/orders)
   // -------------------------------------------------------------
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     if (cart.length === 0) return;
+    if (API_BASE_URL && !sessionToken) {
+      triggerToast('Vui long quet ma QR tai ban truoc khi goi mon.');
+      return;
+    }
+
     setIsSubmittingOrder(true);
+
+    if (API_BASE_URL && sessionToken) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionToken,
+            idempotencyKey: createIdempotencyKey(),
+            items: cart.map(item => ({
+              menuItemId: item.menuItemId,
+              quantity: item.quantity,
+              note: item.note
+            }))
+          })
+        });
+        const payload = await response.json() as ApiResponse<ApiOrder>;
+
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error?.message || 'Khong the tao order.');
+        }
+
+        const newOrder = mapApiOrder(payload.data, tableSession?.tableNumber || 'A01');
+        addPlacedOrder(newOrder, {
+          status: 'connecting',
+          message: 'Order da tao, dang ket noi SignalR de theo doi trang thai mon.'
+        });
+        setCart([]);
+        setIsCartOpen(false);
+        setActiveTab('tracker');
+        triggerToast('Gui order thanh cong! Dang theo doi trang thai realtime.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Khong the tao order.';
+        triggerToast(message);
+      } finally {
+        setIsSubmittingOrder(false);
+      }
+
+      return;
+    }
 
     setTimeout(() => {
       const orderCode = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -573,7 +597,10 @@ export function App() {
         placedAt: new Date()
       };
 
-      setPlacedOrders(prev => [newOrder, ...prev]);
+      addPlacedOrder(newOrder, {
+        status: 'demo',
+        message: 'Che do demo dang mo phong SignalR vi chua co VITE_API_BASE_URL.'
+      });
       setCart([]);
       setIsCartOpen(false);
       setIsSubmittingOrder(false);
@@ -633,8 +660,8 @@ export function App() {
     setIsAiTyping(true);
 
     setTimeout(() => {
-      let aiResponseText = "";
-      let sources: string[] = ["menu.md"];
+      let aiResponseText: string;
+      let sources: string[];
       let suggestedAction: ChatMessage["suggestedAction"] = undefined;
 
       const lowerQuery = query.toLowerCase();
@@ -1416,6 +1443,15 @@ export function App() {
           {activeTab === 'tracker' && (
             <div className="animate-fade-in tracker-container">
               <div className="tracker-header">
+                <div className={`realtime-status-strip ${realtimeStatus}`} aria-live="polite">
+                  <span className="realtime-status-dot"></span>
+                  <span>{realtimeMessage}</span>
+                  {lastRealtimeAt && (
+                    <span className="realtime-status-time">
+                      Cap nhat {lastRealtimeAt.toLocaleTimeString('vi-VN')}
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
                   <Clock size={14} /> Theo Dõi Gọi Món Realtime
                 </div>
@@ -1722,7 +1758,7 @@ export function App() {
                         key={item.key}
                         type="button"
                         className={`size-option-btn ${selectedSize === item.key ? 'active' : ''}`}
-                        onClick={() => setSelectedSize(item.key as any)}
+                        onClick={() => setSelectedSize(item.key as DishSize)}
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -1761,7 +1797,7 @@ export function App() {
                             key={item.key}
                             type="button"
                             className={`custom-pill-btn ${selectedTemperature === item.key ? 'active' : ''}`}
-                            onClick={() => setSelectedTemperature(item.key as any)}
+                            onClick={() => setSelectedTemperature(item.key as DrinkTemperature)}
                             style={{
                               flex: 1,
                               padding: '10px 8px',

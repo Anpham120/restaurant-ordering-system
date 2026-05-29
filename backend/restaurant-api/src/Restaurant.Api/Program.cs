@@ -4,6 +4,7 @@ using Restaurant.Application;
 using Restaurant.Infrastructure;
 using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Ordering;
+using Restaurant.Api.Shared.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IRestaurantRealtimePublisher, SignalRRestaurantRealtimePublisher>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
@@ -41,6 +44,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
+app.MapHub<RestaurantHub>("/hubs/restaurant");
 
 // Menu module
 app.MapMenuCategoriesEndpoints();

@@ -3,6 +3,7 @@ using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
 using Restaurant.Api.Modules.Billing;
+using Restaurant.Api.Modules.Ordering;
 using Restaurant.Api.Shared.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,6 +49,7 @@ app.MapHub<RestaurantHub>("/hubs/restaurant");
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+app.MapOrdersEndpoints();
 
 // Table module
 app.MapTableEndpoints();

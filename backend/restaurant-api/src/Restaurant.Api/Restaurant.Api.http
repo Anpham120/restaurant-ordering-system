@@ -4,8 +4,3 @@ GET {{Restaurant_Api_HostAddress}}/health
 Accept: text/plain
 
 ###
-
-GET {{Restaurant_Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

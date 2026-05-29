@@ -1,6 +1,10 @@
+using Restaurant.Api.Hubs;
+using Restaurant.Api.Modules.Orders;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
+using Restaurant.Api.Services;
 using Restaurant.Application;
+using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure;
 using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Ordering;
@@ -8,8 +12,7 @@ using Restaurant.Api.Shared.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// ── Core services ─────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddSignalR();
@@ -17,7 +20,35 @@ builder.Services.AddSingleton<IRestaurantRealtimePublisher, SignalRRestaurantRea
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-// Authorization – "ManagerOnly" policy placeholder (JWT wired in Issue #11)
+// ── SignalR ───────────────────────────────────────────────────────────────────
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
+
+// Register the hub service so Application-layer use-cases can broadcast without
+// taking a direct dependency on SignalR (keeping the Application layer clean).
+builder.Services.AddScoped<IRestaurantHubService, RestaurantHubService>();
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Allow the admin-web dev-server to connect to the SignalR hub via WebSocket.
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? ["http://localhost:5173", "http://localhost:4173"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AdminWebPolicy", policy =>
+    {
+        policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Required for SignalR WebSocket handshake
+    });
+});
+
+// ── Authorization ─────────────────────────────────────────────────────────────
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization(options =>
 {
@@ -29,7 +60,7 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ── HTTP pipeline ─────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -40,12 +71,21 @@ app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), appBuilder =
     appBuilder.UseHttpsRedirection();
 });
 
+// CORS must come before Authentication/Authorization and before MapHub
+app.UseCors("AdminWebPolicy");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ── Health check ──────────────────────────────────────────────────────────────
 app.MapHealthChecks("/health");
 app.MapHub<RestaurantHub>("/hubs/restaurant");
 
+// ── SignalR Hub ───────────────────────────────────────────────────────────────
+app.MapHub<RestaurantHub>("/hubs/restaurant")
+   .RequireCors("AdminWebPolicy");
+
+// ── REST Endpoints ────────────────────────────────────────────────────────────
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
@@ -61,5 +101,8 @@ app.MapTableSessionEndpoints();
 
 // Billing module
 app.MapBillingEndpoints();
+
+// Order module
+app.MapOrderItemEndpoints();
 
 app.Run();

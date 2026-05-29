@@ -1,73 +1,42 @@
-# React + TypeScript + Vite
+# Admin Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite application for internal restaurant roles: Staff, Kitchen, Cashier, and Manager.
 
-Currently, two official plugins are available:
+## Realtime configuration
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Staff and Manager screens connect to the backend SignalR hub to receive `OrderItemReady` events:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+/hubs/restaurant
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Environment variables:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_API_BASE_URL=https://localhost:5001
+VITE_RESTAURANT_HUB_URL=https://localhost:5001/hubs/restaurant
 ```
+
+`VITE_RESTAURANT_HUB_URL` is optional. If it is not set, the app derives the hub URL from `VITE_API_BASE_URL` and removes a trailing `/api/v1` when present.
+
+## Local development
+
+```powershell
+npm install
+npm run dev
+```
+
+## Verification
+
+```powershell
+npm run lint
+npm run build
+```
+
+Manual realtime check:
+
+1. Run the backend with SignalR hub `/hubs/restaurant`.
+2. Run `npm run dev`.
+3. Open Admin Web, quick-login as `Staff`.
+4. Emit `OrderItemReady` with `orderItemId`, `orderId`, and `status: "Ready"`.
+5. Confirm the Staff serving list shows the ready item and the SignalR status badge is connected.

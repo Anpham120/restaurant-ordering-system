@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
@@ -119,6 +119,10 @@ function App() {
   // Realtime banner warning state
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
 
+  // Staff Ready Dishes Live notifications (Flow 30)
+  const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
+  const prevReadyIds = useRef<string[]>([]);
+
   // Staff Reservation Search & Check-in states
   const [staffActiveTab, setStaffActiveTab] = useState<'map' | 'reservations'>('map');
   const [resSearchKeyword, setResSearchKeyword] = useState('');
@@ -213,6 +217,44 @@ function App() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Live Ready Dishes alert tracker for staff (Flow 30)
+  useEffect(() => {
+    const readyItems = orderItems.filter(item => item.status === 'Ready');
+    
+    readyItems.forEach(item => {
+      if (!prevReadyIds.current.includes(item.id)) {
+        prevReadyIds.current.push(item.id);
+        
+        const tableObj = tables.find(t => t.id === item.tableId);
+        const tblName = tableObj ? tableObj.name : 'Vãng Lai';
+        
+        const newNotif = {
+          id: `notif_${item.id}_${Date.now()}`,
+          dishName: item.dishName,
+          tableNumber: tblName,
+          quantity: item.quantity,
+          time: new Date().toLocaleTimeString('vi-VN'),
+          read: false,
+          itemId: item.id
+        };
+        
+        setStaffNotifications(prev => {
+          if (prev.some(n => n.itemId === item.id)) return prev;
+          return [newNotif, ...prev];
+        });
+        
+        try {
+          const utterance = new SpeechSynthesisUtterance(`Món ${item.dishName} cho Bàn ${tblName} đã chuẩn bị xong.`);
+          utterance.lang = 'vi-VN';
+          utterance.volume = 0.9;
+          window.speechSynthesis.speak(utterance);
+        } catch (soundErr) {
+          console.warn("Speech synthesis blocked", soundErr);
+        }
+      }
+    });
+  }, [orderItems, tables]);
 
   // Handle Auth Login
   const handleLogin = (e: React.FormEvent) => {
@@ -459,6 +501,114 @@ function App() {
 
   return (
     <div className="admin-app">
+      
+      {/* Realtime Waiter Ready Dishes Notifications Stack (Flow 30) */}
+      {userRole === 'Staff' && staffNotifications.filter(n => !n.read).length > 0 && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '24px',
+          zIndex: 99999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          maxWidth: '380px',
+          width: '100%',
+          pointerEvents: 'auto'
+        }}>
+          {staffNotifications.filter(n => !n.read).map(notif => (
+            <div key={notif.id} className="glass-panel" style={{
+              padding: '16px',
+              borderLeft: '4px solid var(--primary)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              borderTopLeftRadius: '4px',
+              borderBottomLeftRadius: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              animation: 'slideIn 0.3s ease-out forwards'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1.4rem' }}>🍲</span>
+                  <div>
+                    <strong style={{ fontSize: '0.92rem', color: 'var(--text-primary)', display: 'block' }}>
+                      Món Ăn Đã Sẵn Sàng!
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Vừa xong ở Bếp • {notif.time}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setStaffNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    padding: 0
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                Món <strong style={{ color: 'var(--primary)' }}>{notif.dishName}</strong> (Số lượng: <strong>{notif.quantity}</strong>) của <strong style={{ color: 'var(--text-primary)' }}>{notif.tableNumber}</strong> đã được chế biến hoàn tất. Vui lòng nhận món và phục vụ khách.
+              </div>
+              
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  onClick={() => {
+                    markItemAsServed(notif.itemId);
+                    setStaffNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'var(--primary)',
+                    color: 'var(--bg-deep)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Check size={14} /> Xác Nhận Đã Bưng Lên
+                </button>
+                <button
+                  onClick={() => {
+                    setStaffNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                  }}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--danger)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Bỏ Qua
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       
       {/* Realtime alerts fallback warning banner */}
       {!isRealtimeConnected && (

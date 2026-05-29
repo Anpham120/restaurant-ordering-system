@@ -1289,6 +1289,57 @@
   margin-bottom: 28px;
 }
 
+.realtime-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.realtime-status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.realtime-status-strip.connected .realtime-status-dot,
+.realtime-status-strip.demo .realtime-status-dot {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.realtime-status-strip.connecting .realtime-status-dot {
+  background: var(--secondary);
+  box-shadow: 0 0 8px rgba(255, 182, 39, 0.55);
+}
+
+.realtime-status-strip.polling .realtime-status-dot {
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.realtime-status-strip.offline .realtime-status-dot {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45);
+}
+
+.realtime-status-time {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
 .tracker-table-num {
   font-size: 1.8rem;
   font-weight: 800;

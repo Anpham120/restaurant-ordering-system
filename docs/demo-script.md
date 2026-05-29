@@ -72,6 +72,8 @@ Cần có seed data:
 - Một vài đặt bàn mẫu
 - Knowledge base cho AI
 
+Dữ liệu demo phải được tạo bằng seed script hoặc checklist rõ ràng. Không dùng dữ liệu test tạm trong production, và sau demo/test phải có bước reset hoặc xóa dữ liệu phát sinh.
+
 ---
 
 ## 3. Kịch bản demo tổng quan
@@ -380,4 +382,3 @@ Nội dung kết luận:
 ```text
 Hệ thống đã hoàn thiện luồng nghiệp vụ chính của nhà hàng, bao gồm đặt bàn, QR Ordering, xử lý bếp realtime, thanh toán và dashboard. Dự án tích hợp AI RAG để hỗ trợ tư vấn món và báo cáo quản lý, đồng thời áp dụng quy trình DevOps với Docker, GitHub Actions và health check để đảm bảo khả năng triển khai.
 ```
-

@@ -251,7 +251,7 @@ export function App() {
     }
   }, [theme]);
 
-  // Realtime bridge: Listen to status updates from Kitchen Display
+  // Realtime bridge: Listen to status updates from Kitchen Display (Flow 33)
   useEffect(() => {
     const interval = setInterval(() => {
       const cookieVal = document.cookie
@@ -268,21 +268,32 @@ export function App() {
                 let orderUpdated = false;
                 const newItems = order.items.map(item => {
                   const update = statusUpdates.find((u: any) => u.dishName === item.menuItemName);
-                  if (update) {
+                  if (update && update.status !== item.status) {
                     orderUpdated = true;
                     updatedAny = true;
                     return { ...item, status: update.status };
                   }
                   return item;
                 });
+
                 if (orderUpdated) {
-                  return { ...order, items: newItems };
+                  // Calculate dynamic overall order status
+                  const allServed = newItems.every(i => i.status === 'Served');
+                  const anyReady = newItems.some(i => i.status === 'Ready');
+                  const anyPreparing = newItems.some(i => i.status === 'Preparing');
+                  
+                  let computedStatus = 'Pending';
+                  if (allServed) computedStatus = 'Served';
+                  else if (anyReady) computedStatus = 'Ready';
+                  else if (anyPreparing) computedStatus = 'Preparing';
+
+                  return { ...order, status: computedStatus as any, items: newItems };
                 }
                 return order;
               });
             });
             if (updatedAny) {
-              triggerToast("🔔 Bếp đã cập nhật trạng thái món ăn mới!");
+              triggerToast("🔔 Trạng thái món ăn tại Bếp đã thay đổi!");
             }
             // Clear the status updates cookie
             document.cookie = "tv_food_order_status_updates=; path=/; max-age=0";
@@ -329,6 +340,20 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
     return (sessionStorage.getItem('activeTab') as any) || 'home';
   });
+
+  // Hash-based tab navigation (Flow 33)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'tracker' || hash === 'menu' || hash === 'reservation' || hash === 'ai' || hash === 'home') {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
 
@@ -1578,85 +1603,154 @@ export function App() {
                   </button>
                 </div>
               ) : (
-                placedOrders.map(order => (
-                  <div key={order.orderId} className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px' }}>
-                      <div>
-                        <div className="tracker-table-num">📍 Bàn {order.tableNumber}</div>
-                        <div className="tracker-order-code">Mã Đơn: <strong>{order.orderCode}</strong> | {new Date(order.placedAt).toLocaleTimeString('vi-VN')}</div>
-                      </div>
-                      <div>
-                        {order.status === 'Pending' && <span className="badge badge-warning">Chờ Bếp Nhận</span>}
-                        {order.status === 'Preparing' && <span className="badge badge-primary pulsing-glow">Đang Chế Biến</span>}
-                        {order.status === 'Ready' && <span className="badge badge-success pulsing-glow">Sẵn Sàng Phục Vụ</span>}
-                        {order.status === 'Served' && <span className="badge badge-success" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>Đã Lên Bàn</span>}
-                      </div>
-                    </div>
-
-                    <div className="tracker-status-box">
-                      <div className={`tracker-status-step ${order.status === 'Pending' ? 'active' :
-                          (order.status === 'Preparing' || order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
-                        }`}>
-                        <div className="tracker-step-icon-container">1</div>
+                placedOrders.map(order => {
+                  const minutesElapsed = Math.floor((Date.now() - new Date(order.placedAt).getTime()) / 60000);
+                  const remainingMinutes = Math.max(15 - minutesElapsed, 1);
+                  return (
+                    <div key={order.orderId} className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px' }}>
                         <div>
-                          <h4 className="tracker-step-title">Gửi Đơn & Chờ Nhận</h4>
-                          <p className="tracker-step-desc">Hệ thống đã gửi đơn xuống bếp bằng Token chống trùng (Idempotency).</p>
-                        </div>
-                      </div>
-
-                      <div className={`tracker-status-step ${order.status === 'Preparing' ? 'active' :
-                          (order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
-                        }`}>
-                        <div className="tracker-step-icon-container">2</div>
-                        <div>
-                          <h4 className="tracker-step-title">Đang Chuẩn Bị (Preparing)</h4>
-                          <p className="tracker-step-desc">Đầu bếp đã nhận đơn và bắt đầu chế biến món ăn của bạn.</p>
-                        </div>
-                      </div>
-
-                      <div className={`tracker-status-step ${order.status === 'Ready' ? 'active' :
-                          (order.status === 'Served') ? 'completed' : ''
-                        }`}>
-                        <div className="tracker-step-icon-container">3</div>
-                        <div>
-                          <h4 className="tracker-step-title">Đã Sẵn Sàng (Ready)</h4>
-                          <p className="tracker-step-desc">Món ăn chế biến xong hoàn hảo, nhân viên bưng bê đang mang tới.</p>
-                        </div>
-                      </div>
-
-                      <div className={`tracker-status-step ${order.status === 'Served' ? 'completed' : ''}`}>
-                        <div className="tracker-step-icon-container">4</div>
-                        <div>
-                          <h4 className="tracker-step-title">Đã Phục Vụ (Served)</h4>
-                          <p className="tracker-step-desc">Món ăn đã được phục vụ lên bàn của quý khách thành công.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="tracker-items-section">
-                      <h4 className="tracker-items-title">Chi Tiết Đơn Gọi</h4>
-                      <div className="tracker-items-list">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="tracker-item-row">
-                            <div className="tracker-item-name-col">
-                              <div>
-                                <span className="tracker-item-qty">x{item.quantity}</span>
-                                <strong>{item.menuItemName}</strong>
-                              </div>
-                              {item.note && <span className="tracker-item-note">💡 Ghi chú: {item.note}</span>}
+                          <div className="tracker-table-num">📍 Bàn {order.tableNumber}</div>
+                          <div className="tracker-order-code">Mã Đơn: <strong>{order.orderCode}</strong> | {new Date(order.placedAt).toLocaleTimeString('vi-VN')}</div>
+                          {order.status !== 'Served' ? (
+                            <div style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Clock size={13} className="animate-float" />
+                              <span>Thời gian chờ dự kiến: ~{remainingMinutes} phút nữa sẽ tới bàn</span>
                             </div>
-                            <div>
-                              {item.status === 'Pending' && <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Đang chờ</span>}
-                              {item.status === 'Preparing' && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Đang nấu</span>}
-                              {item.status === 'Ready' && <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Xong</span>}
-                              {item.status === 'Served' && <span className="badge badge-success" style={{ fontSize: '0.65rem', background: 'transparent' }}>Đã lên bàn</span>}
+                          ) : (
+                            <div style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <CheckCircle size={13} />
+                              <span>Đã bưng phục vụ đầy đủ lên bàn. Chúc ngon miệng!</span>
                             </div>
+                          )}
+                        </div>
+                        <div>
+                          {order.status === 'Pending' && <span className="badge badge-warning">Chờ Bếp Nhận</span>}
+                          {order.status === 'Preparing' && <span className="badge badge-primary pulsing-glow">Đang Chế Biến</span>}
+                          {order.status === 'Ready' && <span className="badge badge-success pulsing-glow">Sẵn Sàng Phục Vụ</span>}
+                          {order.status === 'Served' && <span className="badge badge-success" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>Đã Lên Bàn</span>}
+                        </div>
+                      </div>
+
+                      <div className="tracker-status-box">
+                        <div className={`tracker-status-step ${order.status === 'Pending' ? 'active' :
+                            (order.status === 'Preparing' || order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
+                          }`}>
+                          <div className="tracker-step-icon-container">1</div>
+                          <div>
+                            <h4 className="tracker-step-title">Gửi Đơn & Chờ Nhận</h4>
+                            <p className="tracker-step-desc">Hệ thống đã gửi đơn xuống bếp bằng Token chống trùng (Idempotency).</p>
                           </div>
-                        ))}
+                        </div>
+
+                        <div className={`tracker-status-step ${order.status === 'Preparing' ? 'active' :
+                            (order.status === 'Ready' || order.status === 'Served') ? 'completed' : ''
+                          }`}>
+                          <div className="tracker-step-icon-container">2</div>
+                          <div>
+                            <h4 className="tracker-step-title">Đang Chuẩn Bị (Preparing)</h4>
+                            <p className="tracker-step-desc">Đầu bếp đã nhận đơn và bắt đầu chế biến món ăn của bạn.</p>
+                          </div>
+                        </div>
+
+                        <div className={`tracker-status-step ${order.status === 'Ready' ? 'active' :
+                            (order.status === 'Served') ? 'completed' : ''
+                          }`}>
+                          <div className="tracker-step-icon-container">3</div>
+                          <div>
+                            <h4 className="tracker-step-title">Đã Sẵn Sàng (Ready)</h4>
+                            <p className="tracker-step-desc">Món ăn chế biến xong hoàn hảo, nhân viên bưng bê đang mang tới.</p>
+                          </div>
+                        </div>
+
+                        <div className={`tracker-status-step ${order.status === 'Served' ? 'completed' : ''}`}>
+                          <div className="tracker-step-icon-container">4</div>
+                          <div>
+                            <h4 className="tracker-step-title">Đã Phục Vụ (Served)</h4>
+                            <p className="tracker-step-desc">Món ăn đã được phục vụ lên bàn của quý khách thành công.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Assistant Waiter & Call service block (Flow 33) */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        padding: '16px 20px',
+                        background: 'var(--bg-deep)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        marginBottom: '20px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700 }}>
+                            🤵
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700 }}>Nhân viên hỗ trợ: Trần Tiến Đạt (Bàn {order.tableNumber})</div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Đang trực tuyến điều phối trạm phục vụ của quý khách</div>
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '4px' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ fontSize: '0.78rem', padding: '8px 10px', height: 'auto', minHeight: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
+                            onClick={() => {
+                              triggerToast("🛎️ Đã gửi yêu cầu trợ giúp! Nhân viên phục vụ đang di chuyển tới bàn.");
+                            }}
+                          >
+                            🛎️ Gọi Phục Vụ
+                          </button>
+                          
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ fontSize: '0.78rem', padding: '8px 10px', height: 'auto', minHeight: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
+                            onClick={() => {
+                              triggerToast("🧊 Đã yêu cầu thêm Nước Đá! Nhân viên sẽ mang lên ngay.");
+                            }}
+                          >
+                            🧊 Thêm Nước Đá
+                          </button>
+
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ fontSize: '0.78rem', padding: '8px 10px', height: 'auto', minHeight: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
+                            onClick={() => {
+                              triggerToast("🧻 Đã yêu cầu thêm Khăn Lạnh! Nhân viên sẽ mang lên ngay.");
+                            }}
+                          >
+                            🧻 Xin Khăn Lạnh
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="tracker-items-section">
+                        <h4 className="tracker-items-title">Chi Tiết Đơn Gọi</h4>
+                        <div className="tracker-items-list">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="tracker-item-row">
+                              <div className="tracker-item-name-col">
+                                <div>
+                                  <span className="tracker-item-qty">x{item.quantity}</span>
+                                  <strong>{item.menuItemName}</strong>
+                                </div>
+                                {item.note && <span className="tracker-item-note">💡 Ghi chú: {item.note}</span>}
+                              </div>
+                              <div>
+                                {item.status === 'Pending' && <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Đang chờ</span>}
+                                {item.status === 'Preparing' && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Đang nấu</span>}
+                                {item.status === 'Ready' && <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Xong</span>}
+                                {item.status === 'Served' && <span className="badge badge-success" style={{ fontSize: '0.65rem', background: 'transparent' }}>Đã lên bàn</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

@@ -70,6 +70,28 @@ services:
       postgres:
         condition: service_healthy
 
+  admin-web:
+    build:
+      context: ../frontend/admin-web
+      dockerfile: Dockerfile
+    container_name: restaurant-admin-web
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+
+  customer-web:
+    build:
+      context: ../frontend/customer-web
+      dockerfile: Dockerfile
+    container_name: restaurant-customer-web
+    restart: unless-stopped
+    ports:
+      - "5174:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+
 volumes:
   restaurant_postgres_data:
   restaurant_redis_data:

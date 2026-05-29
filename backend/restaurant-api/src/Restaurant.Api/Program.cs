@@ -1,5 +1,9 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Restaurant.Api.Hubs;
 using Restaurant.Api.Modules.Billing;
+using Restaurant.Api.Modules.Identity;
 using Restaurant.Api.Modules.Kitchen;
 using Restaurant.Application.Features.Kitchen;
 using Restaurant.Infrastructure.Features.Kitchen;
@@ -48,17 +52,37 @@ builder.Services.AddScoped<IKitchenRepository, KitchenRepository>();
 builder.Services.AddScoped<GetKitchenOrderItemsUseCase>();
 builder.Services.AddScoped<UpdateOrderItemStatusUseCase>();
 
-// ── Authorization ─────────────────────────────────────────────────────────────
-builder.Services.AddAuthentication();
+// ── Authentication JWT ────────────────────────────────────────────────────────
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? throw new InvalidOperationException("Jwt:Secret not configured.");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "restaurant-api";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "restaurant-app";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+        };
+    });
+
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("ManagerOnly", policy =>
-        policy.RequireAuthenticatedUser());
-    options.AddPolicy("CashierOrManager", policy =>
-        policy.RequireRole("Cashier", "Manager"));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("CashierOrManager", policy => policy.RequireRole("Cashier", "Manager"));
 });
 
 var app = builder.Build();
+
+await Restaurant.Infrastructure.Data.DatabaseSeeder.SeedAsync(app.Services);
 
 // ── HTTP pipeline ─────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
@@ -83,6 +107,9 @@ app.MapHub<RestaurantHub>("/hubs/restaurant")
    .RequireCors("AdminWebPolicy");
 
 // ── REST Endpoints ────────────────────────────────────────────────────────────
+// Identity module
+app.MapIdentityEndpoints();
+
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();

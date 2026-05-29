@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Restaurant.Application.Features.Identity;
 using Restaurant.Application.Features.Reservations;
 using Restaurant.Application.Features.Reservations.CheckIn;
 using Restaurant.Application.Features.Tables;
 using Restaurant.Infrastructure.Data;
+using Restaurant.Infrastructure.Features.Identity;
 using Restaurant.Infrastructure.Features.Menu.Categories;
 using Restaurant.Infrastructure.Features.Menu.Items;
 using Restaurant.Infrastructure.Features.Billing;
@@ -36,6 +38,12 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
 
         // Menu Category handlers
+        // Identity
+        services.AddScoped<IIdentityRepository, IdentityRepository>();
+        services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<LoginUseCase>();
+
         services.AddScoped<GetMenuCategoriesHandler>();
         services.AddScoped<CreateMenuCategoryHandler>();
         services.AddScoped<UpdateMenuCategoryHandler>();

@@ -7,6 +7,7 @@ using Restaurant.Application.Features.Tables;
 using Restaurant.Infrastructure.Data;
 using Restaurant.Infrastructure.Features.Menu.Categories;
 using Restaurant.Infrastructure.Features.Menu.Items;
+using Restaurant.Infrastructure.Features.Billing;
 using Restaurant.Infrastructure.Features.Ordering.Orders;
 using Restaurant.Infrastructure.Features.Reservations;
 using Restaurant.Infrastructure.Features.Reservations.CheckIn;
@@ -31,6 +32,7 @@ public static class DependencyInjection
                     connectionString,
                     npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(RestaurantDbContext).Assembly.FullName))
                 .UseSnakeCaseNamingConvention());
+        services.AddSingleton(TimeProvider.System);
 
         // Menu Category handlers
         services.AddScoped<GetMenuCategoriesHandler>();
@@ -67,6 +69,11 @@ public static class DependencyInjection
         services.AddScoped<GetTableSessionByIdUseCase>();
         services.AddScoped<GetTableSessionByTokenUseCase>();
         services.AddScoped<CloseTableSessionUseCase>();
+
+        // Billing handlers
+        services.AddScoped<GetInvoicePreviewHandler>();
+        services.AddScoped<CreateInvoiceHandler>();
+        services.AddScoped<GetInvoiceHandler>();
 
         return services;
     }

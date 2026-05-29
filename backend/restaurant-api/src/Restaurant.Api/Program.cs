@@ -2,6 +2,7 @@ using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
+using Restaurant.Api.Modules.Billing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,8 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ManagerOnly", policy =>
         policy.RequireAuthenticatedUser());
+    options.AddPolicy("CashierOrManager", policy =>
+        policy.RequireRole("Cashier", "Manager"));
 });
 
 var app = builder.Build();
@@ -49,5 +52,8 @@ app.MapTableEndpoints();
 app.MapReservationCheckInEndpoints();
 app.MapReservationEndpoints();
 app.MapTableSessionEndpoints();
+
+// Billing module
+app.MapBillingEndpoints();
 
 app.Run();

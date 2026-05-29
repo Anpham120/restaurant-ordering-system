@@ -5,6 +5,8 @@ using Restaurant.Application;
 using Restaurant.Application.Modules.Kitchen.Interfaces;
 using Restaurant.Application.Modules.Kitchen.UseCases;
 using Restaurant.Infrastructure;
+using Restaurant.Api.Modules.Billing;
+using Restaurant.Api.Modules.Ordering;
 using Restaurant.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +29,8 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ManagerOnly", policy =>
         policy.RequireAuthenticatedUser());
+    options.AddPolicy("CashierOrManager", policy =>
+        policy.RequireRole("Cashier", "Manager"));
 });
 
 var app = builder.Build();
@@ -50,9 +54,18 @@ app.MapHealthChecks("/health");
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+app.MapOrdersEndpoints();
+
+// Table module
+app.MapTableEndpoints();
 
 // Reservation module
 app.MapReservationCheckInEndpoints();
+app.MapReservationEndpoints();
+app.MapTableSessionEndpoints();
+
+// Billing module
+app.MapBillingEndpoints();
 
 // Kitchen module
 app.MapKitchenEndpoints();

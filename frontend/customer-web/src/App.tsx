@@ -252,7 +252,9 @@ export function App() {
   }, [theme]);
 
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
+    return (sessionStorage.getItem('activeTab') as any) || 'home';
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
 
@@ -261,11 +263,19 @@ export function App() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   // Active QR Session (Flow 3.3 / 3.4)
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [tableSession, setTableSession] = useState<TableSession | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(() => {
+    return sessionStorage.getItem('sessionToken');
+  });
+  const [tableSession, setTableSession] = useState<TableSession | null>(() => {
+    const saved = sessionStorage.getItem('tableSession');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   // Cart State
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    const saved = sessionStorage.getItem('cart');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [dishNotes, setDishNotes] = useState("");
   const [dishQuantity, setDishQuantity] = useState(1);
   // Starbucks custom PDP states
@@ -312,6 +322,15 @@ export function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  // Synchronization to sessionStorage to survive page reloads
+  useEffect(() => {
+    sessionStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
 
   const toggleWishlist = (dishId: string) => {
     setWishlist(prev => {
@@ -387,7 +406,7 @@ export function App() {
   // ACTIONS: LOADING TABLE SESSION
   // -------------------------------------------------------------
   const handleLoadTableSession = (token: string) => {
-    setSessionToken(token);
+    sessionStorage.setItem('sessionToken', token);
     const mockSession: TableSession = {
       id: "sess_" + Math.random().toString(36).substr(2, 9),
       tableId: "tbl-a01",
@@ -395,6 +414,9 @@ export function App() {
       status: "Active",
       openedAt: new Date().toISOString()
     };
+    sessionStorage.setItem('tableSession', JSON.stringify(mockSession));
+    
+    setSessionToken(token);
     setTableSession(mockSession);
     setActiveTab('menu');
     triggerToast("📍 Đã kích hoạt session gọi món tại Bàn A01!");
@@ -409,6 +431,8 @@ export function App() {
   };
 
   const handleClearSession = () => {
+    sessionStorage.removeItem('sessionToken');
+    sessionStorage.removeItem('tableSession');
     setSessionToken(null);
     setTableSession(null);
     setCart([]);

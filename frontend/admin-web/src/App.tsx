@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
@@ -107,9 +107,6 @@ function App() {
   const [billingTableId, setBillingTableId] = useState<string>('T102');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'BankTransfer'>('Cash');
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [paidInvoices, setPaidInvoices] = useState<any[]>([]);
-  const [selectedHistoricalInvoice, setSelectedHistoricalInvoice] = useState<any | null>(null);
 
   // Manager AI Operational Report states
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -119,19 +116,12 @@ function App() {
   // Realtime banner warning state
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
 
-  // Staff Ready Dishes Live notifications (Flow 30)
-  const [staffNotifications, setStaffNotifications] = useState<any[]>([]);
-  const prevReadyIds = useRef<string[]>([]);
-
   // Staff Reservation Search & Check-in states
   const [staffActiveTab, setStaffActiveTab] = useState<'map' | 'reservations'>('map');
   const [resSearchKeyword, setResSearchKeyword] = useState('');
   const [resStatusFilter, setResStatusFilter] = useState<'All' | 'Pending' | 'CheckedIn' | 'Cancelled'>('All');
   const [assigningResId, setAssigningResId] = useState<string | null>(null);
   const [selectedTableIdForRes, setSelectedTableIdForRes] = useState<string>('');
-
-  // Kitchen Kanban Filter (Flow 32)
-  const [kitchenCategoryFilter, setKitchenCategoryFilter] = useState<'All' | 'Food' | 'Drinks' | 'Desserts'>('All');
 
   // Toggle Theme helper
   const toggleTheme = () => {
@@ -150,114 +140,6 @@ function App() {
   useEffect(() => {
     document.body.classList.add('light-theme');
   }, []);
-
-  // Realtime bridge: Poll for incoming customer QR orders via shared cookie
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const cookieVal = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('tv_food_shared_orders='));
-      if (cookieVal) {
-        try {
-          const jsonStr = decodeURIComponent(cookieVal.split('=')[1]);
-          const incomingOrders = JSON.parse(jsonStr);
-          if (incomingOrders && incomingOrders.length > 0) {
-            incomingOrders.forEach((order: any) => {
-              // Convert and map the incoming order items to admin-web OrderItem structure
-              const newItems = order.items.map((item: any) => {
-                // Map the tableNumber to matching tableId or default
-                const tblNum = order.tableNumber || "A02";
-                let matchedTblId = "T102";
-                if (tblNum === "A01" || tblNum === "Bàn A101" || tblNum === "tbl-a01") matchedTblId = "T101";
-                else if (tblNum === "A02" || tblNum === "Bàn A102" || tblNum === "tbl-a02") matchedTblId = "T102";
-                else if (tblNum === "VIP B201" || tblNum === "tbl-b201") matchedTblId = "T201";
-                else if (tblNum === "VIP B202" || tblNum === "tbl-b202") matchedTblId = "T202";
-                else if (tblNum === "Bàn C302" || tblNum === "tbl-c302") matchedTblId = "T302";
-
-                return {
-                  id: item.id || `ORD_${Math.floor(100 + Math.random() * 900)}`,
-                  tableId: matchedTblId,
-                  dishName: item.menuItemName,
-                  quantity: item.quantity,
-                  note: item.note || 'Gọi món từ QR Khách Hàng',
-                  status: 'Pending',
-                  timeAdded: new Date().toISOString()
-                };
-              });
-
-              // Add to global orderItems state
-              setOrderItems(prev => [...newItems, ...prev]);
-
-              // Automatically set the target table status to Occupied
-              const tblNum = order.tableNumber || "A02";
-              let matchedTblId = "T102";
-              if (tblNum === "A01" || tblNum === "Bàn A101" || tblNum === "tbl-a01") matchedTblId = "T101";
-              else if (tblNum === "A02" || tblNum === "Bàn A102" || tblNum === "tbl-a02") matchedTblId = "T102";
-              else if (tblNum === "VIP B201" || tblNum === "tbl-b201") matchedTblId = "T201";
-              else if (tblNum === "VIP B202" || tblNum === "tbl-b202") matchedTblId = "T202";
-              else if (tblNum === "Bàn C302" || tblNum === "tbl-c302") matchedTblId = "T302";
-
-              setTables(prev => prev.map(t => t.id === matchedTblId ? { ...t, status: 'Occupied', currentSessionId: `sess_${matchedTblId}` } : t));
-
-              // Audio announcement feedback
-              try {
-                const utterance = new SpeechSynthesisUtterance(`Có đơn gọi món mới từ Bàn ${tblNum}`);
-                utterance.lang = 'vi-VN';
-                utterance.volume = 0.8;
-                window.speechSynthesis.speak(utterance);
-              } catch (soundErr) {
-                console.warn("Speech synthesis audio feedback blocked or unsupported", soundErr);
-              }
-            });
-
-            // Clear the shared orders cookie once synchronized
-            document.cookie = "tv_food_shared_orders=; path=/; max-age=0";
-          }
-        } catch (e) {
-          console.error("Error reading shared orders cookie", e);
-        }
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Live Ready Dishes alert tracker for staff (Flow 30)
-  useEffect(() => {
-    const readyItems = orderItems.filter(item => item.status === 'Ready');
-    
-    readyItems.forEach(item => {
-      if (!prevReadyIds.current.includes(item.id)) {
-        prevReadyIds.current.push(item.id);
-        
-        const tableObj = tables.find(t => t.id === item.tableId);
-        const tblName = tableObj ? tableObj.name : 'Vãng Lai';
-        
-        const newNotif = {
-          id: `notif_${item.id}_${Date.now()}`,
-          dishName: item.dishName,
-          tableNumber: tblName,
-          quantity: item.quantity,
-          time: new Date().toLocaleTimeString('vi-VN'),
-          read: false,
-          itemId: item.id
-        };
-        
-        setStaffNotifications(prev => {
-          if (prev.some(n => n.itemId === item.id)) return prev;
-          return [newNotif, ...prev];
-        });
-        
-        try {
-          const utterance = new SpeechSynthesisUtterance(`Món ${item.dishName} cho Bàn ${tblName} đã chuẩn bị xong.`);
-          utterance.lang = 'vi-VN';
-          utterance.volume = 0.9;
-          window.speechSynthesis.speak(utterance);
-        } catch (soundErr) {
-          console.warn("Speech synthesis blocked", soundErr);
-        }
-      }
-    });
-  }, [orderItems, tables]);
 
   // Handle Auth Login
   const handleLogin = (e: React.FormEvent) => {
@@ -320,25 +202,6 @@ function App() {
         if (item.status === 'Pending') nextStatus = 'Preparing';
         else if (item.status === 'Preparing') nextStatus = 'Ready';
         else if (item.status === 'Ready') nextStatus = 'Served';
-
-        // Realtime bridge: Save update to shared cookie for customer-web
-        const existingUpdatesCookie = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('tv_food_order_status_updates='));
-        let statusUpdates = [];
-        if (existingUpdatesCookie) {
-          try {
-            statusUpdates = JSON.parse(decodeURIComponent(existingUpdatesCookie.split('=')[1]));
-          } catch (e) {
-            statusUpdates = [];
-          }
-        }
-        statusUpdates.push({
-          dishName: item.dishName,
-          status: nextStatus
-        });
-        document.cookie = `tv_food_order_status_updates=${encodeURIComponent(JSON.stringify(statusUpdates))}; path=/; max-age=86400`;
-
         return { ...item, status: nextStatus };
       }
       return item;
@@ -349,24 +212,6 @@ function App() {
   const markItemAsServed = (itemId: string) => {
     setOrderItems(prev => prev.map(item => {
       if (item.id === itemId) {
-        // Realtime bridge: Save Served update to shared cookie for customer-web
-        const existingUpdatesCookie = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('tv_food_order_status_updates='));
-        let statusUpdates = [];
-        if (existingUpdatesCookie) {
-          try {
-            statusUpdates = JSON.parse(decodeURIComponent(existingUpdatesCookie.split('=')[1]));
-          } catch (e) {
-            statusUpdates = [];
-          }
-        }
-        statusUpdates.push({
-          dishName: item.dishName,
-          status: 'Served'
-        });
-        document.cookie = `tv_food_order_status_updates=${encodeURIComponent(JSON.stringify(statusUpdates))}; path=/; max-age=86400`;
-
         return { ...item, status: 'Served' };
       }
       return item;
@@ -414,36 +259,11 @@ function App() {
 
   // Submit payment & clear active table session (Cashier Action)
   const executePayment = (tableId: string) => {
-    const items = getBillingItems(tableId);
-    const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const discountAmount = Math.round(subtotal * (discountPercent / 100));
-    const vat = Math.round((subtotal - discountAmount) * 0.08);
-    const grandTotal = subtotal - discountAmount + vat;
-    const invCode = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const newInvoice = {
-      invoiceCode: invCode,
-      tableName: tables.find(t => t.id === tableId)?.name || tableId,
-      subtotal,
-      discount: discountAmount,
-      vat,
-      grandTotal,
-      paymentMethod,
-      paidAt: new Date().toLocaleTimeString('vi-VN'),
-      items
-    };
-
-    // Save invoice to local log history
-    setPaidInvoices(prev => [newInvoice, ...prev]);
-
     // Remove active orders for this table
     setOrderItems(prev => prev.filter(item => item.tableId !== tableId));
     // Set table state to Cleaning
     setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'Cleaning', currentSessionId: undefined } : t));
     
-    // Reset discount
-    setDiscountPercent(0);
-
     setIsPaidSuccess(true);
     setTimeout(() => {
       setIsPaidSuccess(false);
@@ -498,120 +318,11 @@ function App() {
 
   const currentBillingItems = getBillingItems(billingTableId);
   const billingSubtotal = currentBillingItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const billingDiscount = Math.round(billingSubtotal * (discountPercent / 100));
-  const billingTax = Math.round((billingSubtotal - billingDiscount) * 0.08); // 8% VAT
-  const billingGrandTotal = billingSubtotal - billingDiscount + billingTax;
+  const billingTax = Math.round(billingSubtotal * 0.08); // 8% VAT
+  const billingGrandTotal = billingSubtotal + billingTax;
 
   return (
     <div className="admin-app">
-      
-      {/* Realtime Waiter Ready Dishes Notifications Stack (Flow 30) */}
-      {userRole === 'Staff' && staffNotifications.filter(n => !n.read).length > 0 && (
-        <div style={{
-          position: 'fixed',
-          top: '80px',
-          right: '24px',
-          zIndex: 99999,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          maxWidth: '380px',
-          width: '100%',
-          pointerEvents: 'auto'
-        }}>
-          {staffNotifications.filter(n => !n.read).map(notif => (
-            <div key={notif.id} className="glass-panel" style={{
-              padding: '16px',
-              borderLeft: '4px solid var(--primary)',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-              background: 'var(--bg-surface)',
-              borderRadius: '12px',
-              borderTopLeftRadius: '4px',
-              borderBottomLeftRadius: '4px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-              animation: 'slideIn 0.3s ease-out forwards'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '1.4rem' }}>🍲</span>
-                  <div>
-                    <strong style={{ fontSize: '0.92rem', color: 'var(--text-primary)', display: 'block' }}>
-                      Món Ăn Đã Sẵn Sàng!
-                    </strong>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      Vừa xong ở Bếp • {notif.time}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setStaffNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    padding: 0
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                Món <strong style={{ color: 'var(--primary)' }}>{notif.dishName}</strong> (Số lượng: <strong>{notif.quantity}</strong>) của <strong style={{ color: 'var(--text-primary)' }}>{notif.tableNumber}</strong> đã được chế biến hoàn tất. Vui lòng nhận món và phục vụ khách.
-              </div>
-              
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                <button
-                  onClick={() => {
-                    markItemAsServed(notif.itemId);
-                    setStaffNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                  }}
-                  style={{
-                    flex: 1,
-                    background: 'var(--primary)',
-                    color: 'var(--bg-deep)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Check size={14} /> Xác Nhận Đã Bưng Lên
-                </button>
-                <button
-                  onClick={() => {
-                    setStaffNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                  }}
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    color: 'var(--danger)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Bỏ Qua
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       
       {/* Realtime alerts fallback warning banner */}
       {!isRealtimeConnected && (
@@ -1271,106 +982,38 @@ function App() {
                   </div>
                 </div>
 
-                {/* Station Filter Pills and Audio controls (Flow 32) */}
-                <div className="kitchen-station-filters" style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px 24px',
-                  background: 'var(--bg-surface)',
-                  borderRadius: '12px',
-                  marginBottom: '20px',
-                  border: '1px solid var(--border-color)',
-                  gap: '16px',
-                  flexWrap: 'wrap'
-                }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: '8px' }}>
-                      Phân Khu Bếp (Stations):
-                    </span>
-                    {(['All', 'Food', 'Drinks', 'Desserts'] as const).map(cat => (
-                      <button
-                        key={cat}
-                        className={`res-filter-pill ${kitchenCategoryFilter === cat ? 'active' : ''}`}
-                        onClick={() => setKitchenCategoryFilter(cat)}
-                      >
-                        {cat === 'All' && '🔥 Tất Cả Trạm'}
-                        {cat === 'Food' && '🍲 Trạm Món Chính'}
-                        {cat === 'Drinks' && '☕ Quầy Đồ Uống'}
-                        {cat === 'Desserts' && '🍰 Quầy Tráng Miệng'}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      className="btn btn-secondary" 
-                      onClick={() => {
-                        const latePending = orderItems.filter(i => i.status === 'Pending' && getWaitTimeStr(i.timeAdded) >= 10);
-                        if (latePending.length === 0) {
-                          const utterance = new SpeechSynthesisUtterance("Không có món ăn nào bị trễ. Bếp đang vận hành xuất sắc!");
-                          utterance.lang = 'vi-VN';
-                          window.speechSynthesis.speak(utterance);
-                        } else {
-                          const utterance = new SpeechSynthesisUtterance(`Cảnh báo: Có ${latePending.length} món ăn đang đợi trên mười phút. Xin bếp ưu tiên!`);
-                          utterance.lang = 'vi-VN';
-                          window.speechSynthesis.speak(utterance);
-                        }
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: 'none' }}
-                    >
-                      <AlertTriangle size={15} /> Quét Cảnh Báo Trễ Món
-                    </button>
-                  </div>
-                </div>
-
                 {/* Kanban columns Grid */}
                 <div className="kanban-board-grid">
                   
                   {/* Column 1: Pending */}
                   <div className="kanban-column col-pending">
                     <div className="column-header">
-                      <h3>Chờ Chế Biến ({orderItems.filter(i => itemStatusFilter(i, 'Pending', kitchenCategoryFilter)).length})</h3>
+                      <h3>Chờ Chế Biến ({orderItems.filter(i => itemStatusFilter(i, 'Pending')).length})</h3>
                     </div>
                     <div className="column-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Pending', kitchenCategoryFilter)).length === 0 ? (
+                      {orderItems.filter(i => itemStatusFilter(i, 'Pending')).length === 0 ? (
                         <div className="kanban-empty-state">Trống</div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Pending', kitchenCategoryFilter)).map(item => {
-                          const waitTime = getWaitTimeStr(item.timeAdded);
-                          return (
-                            <div key={item.id} className="kanban-item-card" style={{
-                              borderLeft: waitTime >= 15 ? '4px solid var(--danger)' : waitTime >= 10 ? '4px solid #f59e0b' : '4px solid var(--border-color)'
-                            }}>
-                              <div className="item-card-top">
-                                <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
-                                {waitTime >= 15 ? (
-                                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    🚨 TRỄ MÓN ({waitTime}m)
-                                  </span>
-                                ) : waitTime >= 10 ? (
-                                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    ⏳ CHỜ LÂU ({waitTime}m)
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    🟢 ỔN ĐỊNH ({waitTime}m)
-                                  </span>
-                                )}
-                              </div>
-                              <h4 className="item-dish-name">{item.dishName}</h4>
-                              <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                              {item.note && <div className="item-note-box">📝 {item.note}</div>}
-                              
-                              <button 
-                                className="btn btn-primary btn-advance w-full mt-10"
-                                onClick={() => advanceOrderStatus(item.id)}
-                              >
-                                Bắt Đầu Nấu <Play size={12} />
-                              </button>
+                        orderItems.filter(i => itemStatusFilter(i, 'Pending')).map(item => (
+                          <div key={item.id} className="kanban-item-card">
+                            <div className="item-card-top">
+                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                              <span className="item-time-waiting">
+                                <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
+                              </span>
                             </div>
-                          );
-                        })
+                            <h4 className="item-dish-name">{item.dishName}</h4>
+                            <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
+                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                            
+                            <button 
+                              className="btn btn-primary btn-advance w-full mt-10"
+                              onClick={() => advanceOrderStatus(item.id)}
+                            >
+                              Bắt Đầu Nấu <Play size={12} />
+                            </button>
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
@@ -1378,47 +1021,32 @@ function App() {
                   {/* Column 2: Preparing */}
                   <div className="kanban-column col-preparing">
                     <div className="column-header">
-                      <h3>Đang Nấu ({orderItems.filter(i => itemStatusFilter(i, 'Preparing', kitchenCategoryFilter)).length})</h3>
+                      <h3>Đang Nấu ({orderItems.filter(i => itemStatusFilter(i, 'Preparing')).length})</h3>
                     </div>
                     <div className="column-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Preparing', kitchenCategoryFilter)).length === 0 ? (
+                      {orderItems.filter(i => itemStatusFilter(i, 'Preparing')).length === 0 ? (
                         <div className="kanban-empty-state">Trống</div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Preparing', kitchenCategoryFilter)).map(item => {
-                          const waitTime = getWaitTimeStr(item.timeAdded);
-                          return (
-                            <div key={item.id} className="kanban-item-card card-preparing-active" style={{
-                              borderLeft: waitTime >= 15 ? '4px solid var(--danger)' : waitTime >= 10 ? '4px solid #f59e0b' : '4px solid var(--primary)'
-                            }}>
-                              <div className="item-card-top">
-                                <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
-                                {waitTime >= 15 ? (
-                                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    🚨 TRỄ MÓN ({waitTime}m)
-                                  </span>
-                                ) : waitTime >= 10 ? (
-                                  <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    ⏳ CHỜ LÂU ({waitTime}m)
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    🟢 ĐANG NẤU ({waitTime}m)
-                                  </span>
-                                )}
-                              </div>
-                              <h4 className="item-dish-name">{item.dishName}</h4>
-                              <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                              {item.note && <div className="item-note-box">📝 {item.note}</div>}
-                              
-                              <button 
-                                className="btn btn-secondary btn-advance w-full mt-10"
-                                onClick={() => advanceOrderStatus(item.id)}
-                              >
-                                Báo Món Chín <Check size={14} />
-                              </button>
+                        orderItems.filter(i => itemStatusFilter(i, 'Preparing')).map(item => (
+                          <div key={item.id} className="kanban-item-card card-preparing-active">
+                            <div className="item-card-top">
+                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
+                              <span className="item-time-waiting">
+                                <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
+                              </span>
                             </div>
-                          );
-                        })
+                            <h4 className="item-dish-name">{item.dishName}</h4>
+                            <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
+                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                            
+                            <button 
+                              className="btn btn-secondary btn-advance w-full mt-10"
+                              onClick={() => advanceOrderStatus(item.id)}
+                            >
+                              Báo Món Chín <Check size={14} />
+                            </button>
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
@@ -1426,17 +1054,17 @@ function App() {
                   {/* Column 3: Ready */}
                   <div className="kanban-column col-ready">
                     <div className="column-header">
-                      <h3>Sẵn Sàng Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready', kitchenCategoryFilter)).length})</h3>
+                      <h3>Sẵn Sàng Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
                     </div>
                     <div className="column-items-scroll">
-                      {orderItems.filter(i => itemStatusFilter(i, 'Ready', kitchenCategoryFilter)).length === 0 ? (
+                      {orderItems.filter(i => itemStatusFilter(i, 'Ready')).length === 0 ? (
                         <div className="kanban-empty-state">Trống</div>
                       ) : (
-                        orderItems.filter(i => itemStatusFilter(i, 'Ready', kitchenCategoryFilter)).map(item => (
-                          <div key={item.id} className="kanban-item-card card-ready-active" style={{ borderLeft: '4px solid var(--primary)' }}>
+                        orderItems.filter(i => itemStatusFilter(i, 'Ready')).map(item => (
+                          <div key={item.id} className="kanban-item-card card-ready-active">
                             <div className="item-card-top">
                               <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
-                              <span className="item-time-waiting" style={{ color: 'var(--primary)', fontWeight: 700 }}>✓ XONG</span>
+                              <span className="item-time-waiting">Đã xong</span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
                             <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
@@ -1461,37 +1089,14 @@ function App() {
             {userRole === 'Cashier' && (
               <div className="cashier-panel-layout">
                 
-                {/* Left side: occupied tables list & history logs */}
-                <div className="occupied-tables-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '850px' }}>
-                  <div className="sidebar-title-box" style={{ marginBottom: '8px', paddingBottom: '8px' }}>
-                    <h2>Thu Ngân & Thanh Toán</h2>
-                    <p>Chọn bàn có phiên hoạt động hoặc xem lịch sử ca làm việc.</p>
+                {/* Left side: occupied tables list */}
+                <div className="occupied-tables-sidebar">
+                  <div className="sidebar-title-box">
+                    <h2>Bàn Đang Hoạt Động</h2>
+                    <p>Chọn bàn có phiên sử dụng để in hóa đơn và thanh toán.</p>
                   </div>
 
-                  {/* Active Tables Search input */}
-                  <div className="search-active-tables-box" style={{ marginBottom: '10px' }}>
-                    <input 
-                      type="text"
-                      className="form-input"
-                      placeholder="🔍 Tìm bàn đang hoạt động..."
-                      style={{ fontSize: '0.85rem', padding: '10px 14px' }}
-                      id="cashier-table-search"
-                      onChange={(e) => {
-                        const val = e.target.value.toLowerCase();
-                        const tiles = document.querySelectorAll('.occupied-table-tile');
-                        tiles.forEach(tile => {
-                          const text = tile.textContent?.toLowerCase() || '';
-                          if (text.includes(val)) {
-                            (tile as HTMLElement).style.display = 'flex';
-                          } else {
-                            (tile as HTMLElement).style.display = 'none';
-                          }
-                        });
-                      }}
-                    />
-                  </div>
-
-                  <div className="occupied-tables-scroll" style={{ flexGrow: 1, maxHeight: '350px' }}>
+                  <div className="occupied-tables-scroll">
                     {tables.filter(t => t.status === 'Occupied').length === 0 ? (
                       <div className="empty-box-inline">Không có bàn nào đang có khách.</div>
                     ) : (
@@ -1499,91 +1104,16 @@ function App() {
                         <div 
                           key={table.id}
                           className={`occupied-table-tile ${billingTableId === table.id ? 'active' : ''}`}
-                          onClick={() => {
-                            setBillingTableId(table.id);
-                            setDiscountPercent(0); // Reset discount when switching table
-                          }}
+                          onClick={() => setBillingTableId(table.id)}
                         >
                           <div className="occupied-tile-meta">
                             <strong>{table.name}</strong>
                             <span>{getBillingItems(table.id).length} Món ăn đã gọi</span>
                           </div>
-                          {orderItems.some(i => i.tableId === table.id && i.status !== 'Served') && (
-                            <span className="unserved-warn-dot" title="Còn món chưa phục vụ" style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: 'var(--accent)',
-                              display: 'inline-block',
-                              marginLeft: '8px',
-                              boxShadow: '0 0 6px var(--accent)'
-                            }}></span>
-                          )}
                           <ChevronRight size={16} />
                         </div>
                       ))
                     )}
-                  </div>
-
-                  {/* Historical Invoices section */}
-                  <div className="invoice-history-box" style={{ 
-                    borderTop: '1px solid var(--border-color)', 
-                    paddingTop: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    flexGrow: 1,
-                    overflow: 'hidden'
-                  }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      🧾 Lịch Sử Hóa Đơn ({paidInvoices.length})
-                    </h3>
-                    
-                    <div className="invoice-history-scroll" style={{ 
-                      overflowY: 'auto', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '8px',
-                      maxHeight: '300px'
-                    }}>
-                      {paidInvoices.length === 0 ? (
-                        <div className="empty-box-inline" style={{ fontSize: '0.8rem', padding: '16px' }}>
-                          Chưa xuất hóa đơn nào trong ca.
-                        </div>
-                      ) : (
-                        paidInvoices.map((inv, idx) => (
-                          <div 
-                            key={idx}
-                            style={{
-                              backgroundColor: 'var(--bg-deep)',
-                              border: '1px solid var(--border-color)',
-                              borderRadius: 'var(--radius-sm)',
-                              padding: '10px 14px',
-                              textAlign: 'left',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <div>
-                              <strong style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>{inv.invoiceCode}</strong>
-                              <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{inv.tableName}</div>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{inv.paidAt} - {inv.paymentMethod === 'Cash' ? 'Tiền mặt' : 'Ck'}</span>
-                            </div>
-                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                              <strong style={{ fontSize: '0.88rem' }}>{inv.grandTotal.toLocaleString()}đ</strong>
-                              <button 
-                                className="btn btn-tertiary"
-                                style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto', minHeight: 'unset' }}
-                                onClick={() => setSelectedHistoricalInvoice(inv)}
-                              >
-                                Xem
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
                   </div>
                 </div>
 
@@ -1606,51 +1136,6 @@ function App() {
                           <span>Giờ in: {new Date().toLocaleTimeString('vi-VN')}</span>
                         </div>
                       </div>
-
-                      {/* Business rule validation warning & quick serve button */}
-                      {(() => {
-                        const unserved = orderItems.filter(i => i.tableId === billingTableId && i.status !== 'Served');
-                        if (unserved.length > 0) {
-                          return (
-                            <div className="business-rule-warning-alert" style={{
-                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                              border: '1px dashed var(--accent)',
-                              borderRadius: 'var(--radius-md)',
-                              padding: '16px',
-                              marginBottom: '20px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '12px',
-                              textAlign: 'left'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent)' }}>
-                                <AlertTriangle size={20} />
-                                <strong style={{ fontSize: '0.92rem' }}>CẢNH BÁO NGHIỆP VỤ: Còn {unserved.length} món chưa được phục vụ!</strong>
-                              </div>
-                              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                                Để tuân thủ API contract & quy định của hệ thống TV FOOD, bàn không được phép thanh toán khi vẫn còn món đang chuẩn bị hoặc sẵn sàng trong bếp.
-                              </p>
-                              <div style={{ display: 'flex', gap: '10px' }}>
-                                <button 
-                                  className="btn btn-tertiary text-danger"
-                                  style={{ padding: '6px 12px', fontSize: '0.8rem', height: 'auto', minHeight: 'unset', width: 'auto' }}
-                                  onClick={() => {
-                                    setOrderItems(prev => prev.map(item => {
-                                      if (item.tableId === billingTableId) {
-                                        return { ...item, status: 'Served' };
-                                      }
-                                      return item;
-                                    }));
-                                  }}
-                                >
-                                  ⚡ Xác Nhận Phục Vụ Nhanh Tất Cả Món
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
 
                       {/* Billing Items list table */}
                       <div className="invoice-table-container">
@@ -1682,44 +1167,12 @@ function App() {
                         </table>
                       </div>
 
-                      {/* Discount coupons row selector */}
-                      <div className="discount-selector-box" style={{ marginBottom: '20px', textAlign: 'left' }}>
-                        <span className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>
-                          🎫 Chương trình ưu đãi / Giảm giá (Coupon):
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {([0, 5, 10, 15, 20] as const).map(pct => (
-                            <button
-                              key={pct}
-                              className={`btn ${discountPercent === pct ? 'btn-primary' : 'btn-secondary'}`}
-                              style={{ 
-                                padding: '8px 16px', 
-                                fontSize: '0.82rem', 
-                                minWidth: '60px',
-                                border: discountPercent === pct ? 'none' : '1px solid var(--border-color)',
-                                backgroundColor: discountPercent === pct ? 'var(--primary)' : 'var(--bg-deep)',
-                                color: discountPercent === pct ? '#fff' : 'var(--text-primary)'
-                              }}
-                              onClick={() => setDiscountPercent(pct)}
-                            >
-                              {pct === 0 ? 'Không giảm' : `${pct}%`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
                       {/* Summary prices calculations */}
                       <div className="invoice-price-summary">
                         <div className="summary-row">
                           <span>Tạm tính (chưa thuế):</span>
                           <span>{billingSubtotal.toLocaleString()}đ</span>
                         </div>
-                        {billingDiscount > 0 && (
-                          <div className="summary-row" style={{ color: 'var(--accent)' }}>
-                            <span>Giảm giá ({discountPercent}%):</span>
-                            <span>-{billingDiscount.toLocaleString()}đ</span>
-                          </div>
-                        )}
                         <div className="summary-row">
                           <span>Thuế VAT (8%):</span>
                           <span>{billingTax.toLocaleString()}đ</span>
@@ -1778,12 +1231,7 @@ function App() {
                       <div className="invoice-actions-footer">
                         <button 
                           className="btn btn-primary w-full"
-                          disabled={orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served')}
                           onClick={() => executePayment(billingTableId)}
-                          style={{
-                            opacity: orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served') ? 0.5 : 1,
-                            cursor: orderItems.some(i => i.tableId === billingTableId && i.status !== 'Served') ? 'not-allowed' : 'pointer'
-                          }}
                         >
                           Xác Nhận Đã Thu Tiền & Giải Phóng Bàn
                         </button>
@@ -2084,105 +1532,6 @@ function App() {
         </div>
       </footer>
 
-      {/* Historical Invoices Overlay Modal */}
-      {selectedHistoricalInvoice && (
-        <div className="historical-invoice-modal-overlay" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div className="invoice-box-card" style={{
-            width: '500px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            padding: '24px',
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-lg)'
-          }}>
-            <div className="invoice-header" style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--primary-glow)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '4px', fontWeight: 700 }}>
-                  ĐÃ THANH TOÁN ({selectedHistoricalInvoice.paymentMethod === 'Cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN'})
-                </span>
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ padding: '4px 12px', fontSize: '0.8rem', height: 'auto', minHeight: 'unset' }}
-                  onClick={() => setSelectedHistoricalInvoice(null)}
-                >
-                  Đóng
-                </button>
-              </div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0' }}>CHI TIẾT HÓA ĐƠN ĐÃ LƯU</h3>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div>Mã hóa đơn: <strong>{selectedHistoricalInvoice.invoiceCode}</strong></div>
-                <div>Bàn phục vụ: <strong>{selectedHistoricalInvoice.tableName}</strong></div>
-                <div>Thời gian in: {selectedHistoricalInvoice.paidAt}</div>
-              </div>
-            </div>
-
-            <table className="invoice-data-table" style={{ width: '100%', marginBottom: '16px' }}>
-              <thead>
-                <tr>
-                  <th>Món ăn</th>
-                  <th>SL</th>
-                  <th>Đơn giá</th>
-                  <th className="text-right">Tổng</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedHistoricalInvoice.items.map((item: any, idx: number) => (
-                  <tr key={idx}>
-                    <td>{item.dishName}</td>
-                    <td>x{item.quantity}</td>
-                    <td>{item.price.toLocaleString()}đ</td>
-                    <td className="text-right">{(item.price * item.quantity).toLocaleString()}đ</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="invoice-price-summary" style={{ backgroundColor: 'var(--bg-deep)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-              <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-                <span>Tạm tính:</span>
-                <span>{selectedHistoricalInvoice.subtotal.toLocaleString()}đ</span>
-              </div>
-              {selectedHistoricalInvoice.discount > 0 && (
-                <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px', color: 'var(--accent)' }}>
-                  <span>Khuyến mãi:</span>
-                  <span>-{selectedHistoricalInvoice.discount.toLocaleString()}đ</span>
-                </div>
-              )}
-              <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-                <span>Thuế VAT (8%):</span>
-                <span>{selectedHistoricalInvoice.vat.toLocaleString()}đ</span>
-              </div>
-              <div className="summary-row grand-total-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary)', borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '6px' }}>
-                <span>Tổng cộng:</span>
-                <span>{selectedHistoricalInvoice.grandTotal.toLocaleString()}đ</span>
-              </div>
-            </div>
-            
-            <button 
-              className="btn btn-secondary w-full"
-              style={{ marginTop: '16px' }}
-              onClick={() => setSelectedHistoricalInvoice(null)}
-            >
-              Đóng Cửa Sổ
-            </button>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
@@ -2195,20 +1544,8 @@ function getWaitTimeStr(isoString: string): number {
 }
 
 // Custom Order item status filters
-function getDishCategory(dishName: string): 'Food' | 'Drinks' | 'Desserts' {
-  if (dishName.includes('Trà') || dishName.includes('Cà Phê') || dishName.includes('Đá') || dishName.includes('Nước') || dishName.includes('Sữa')) {
-    return 'Drinks';
-  }
-  if (dishName.includes('Bánh Mì Phô Mai') || dishName.includes('Bánh Ngọt') || dishName.includes('Kem') || dishName.includes('Chè')) {
-    return 'Desserts';
-  }
-  return 'Food';
-}
-
-function itemStatusFilter(item: OrderItem, status: OrderItem['status'], categoryFilter: 'All' | 'Food' | 'Drinks' | 'Desserts' = 'All'): boolean {
-  if (item.status !== status) return false;
-  if (categoryFilter === 'All') return true;
-  return getDishCategory(item.dishName) === categoryFilter;
+function itemStatusFilter(item: OrderItem, status: OrderItem['status']): boolean {
+  return item.status === status;
 }
 
 export default App;

@@ -3,7 +3,7 @@ import {
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
   CheckCircle, RefreshCw, Send, AlertTriangle, Layers, 
-  PlusCircle, ShoppingBag, Eye
+  PlusCircle, ShoppingBag, Eye, Wrench
 } from 'lucide-react';
 import './App.css';
 import { createRestaurantHubConnection } from './realtime/restaurantRealtime';
@@ -661,6 +661,13 @@ function App() {
                             >
                               <Calendar size={16} /> Chuyển Sang Đã Đặt
                             </button>
+                            <button 
+                              className="btn btn-danger w-full mt-10"
+                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                              <Wrench size={16} /> Chuyển Sang Bảo Trì
+                            </button>
                           </div>
                         )}
 
@@ -700,6 +707,14 @@ function App() {
                                 </button>
                               </div>
                             )}
+
+                            <button 
+                              className="btn btn-danger w-full mt-10"
+                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                              <Wrench size={16} /> Chuyển Sang Bảo Trì
+                            </button>
                           </div>
                         )}
 
@@ -745,6 +760,13 @@ function App() {
                               onClick={() => changeTableStatus(selectedTable.id, 'Available')}
                             >
                               <CheckCircle size={16} /> Hoàn Tất Dọn Dẹp (Sẵn Sàng)
+                            </button>
+                            <button 
+                              className="btn btn-danger w-full mt-10"
+                              onClick={() => changeTableStatus(selectedTable.id, 'Inactive')}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                              <Wrench size={16} /> Chuyển Sang Bảo Trì
                             </button>
                           </div>
                         )}

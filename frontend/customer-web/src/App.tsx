@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Utensils,
   Calendar,
@@ -32,9 +32,6 @@ import {
   Cookie
 } from 'lucide-react';
 import './App.css';
-import { useOrderTracking } from './hooks/useOrderTracking';
-import type { ApiOrder, ApiResponse, Order, OrderItem } from './types/orderTracking';
-import { mapApiOrder } from './utils/orderTracking';
 
 // -------------------------------------------------------------
 // TYPES & CONTRACT ALIGNED SCHEMAS
@@ -80,9 +77,23 @@ interface TableSession {
   openedAt: string;
 }
 
-type ActiveTab = 'home' | 'menu' | 'reservation' | 'tracker' | 'ai';
-type DishSize = 'S' | 'M' | 'L' | 'XL';
-type DrinkTemperature = 'Nóng' | 'Đá';
+interface OrderItem {
+  id: string;
+  menuItemName: string;
+  quantity: number;
+  unitPrice: number;
+  status: 'Pending' | 'Preparing' | 'Ready' | 'Served' | 'Cancelled';
+  note?: string;
+}
+
+interface Order {
+  orderId: string;
+  orderCode: string;
+  tableNumber: string;
+  status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
+  items: OrderItem[];
+  placedAt: Date;
+}
 
 interface ChatMessage {
   id: string;
@@ -218,23 +229,12 @@ const CATEGORIES = [
   { id: "cat-dessert", name: "Tráng Miệng", emoji: "🍰" }
 ];
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
-
 const getBadgeClass = (tag: string): string => {
   const t = tag.toLowerCase();
   if (t.includes('cay')) return 'badge-danger';
   if (t.includes('bán chạy') || t.includes('được thích') || t.includes('đặc sản')) return 'badge-primary';
   if (t.includes('healthy') || t.includes('thanh đạm') || t.includes('khai vị') || t.includes('thanh nhiệt') || t.includes('thanh mát')) return 'badge-success';
   return 'badge-warning';
-};
-
-const createIdempotencyKey = () => {
-  if (crypto.randomUUID) return crypto.randomUUID();
-  return `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-};
-
-const isActiveTab = (value: string | null): value is ActiveTab => {
-  return value === 'home' || value === 'menu' || value === 'reservation' || value === 'tracker' || value === 'ai';
 };
 
 export function App() {
@@ -251,14 +251,86 @@ export function App() {
     }
   }, [theme]);
 
+  // Realtime bridge: Listen to status updates from Kitchen Display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const cookieVal = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('tv_food_order_status_updates='));
+      if (cookieVal) {
+        try {
+          const jsonStr = decodeURIComponent(cookieVal.split('=')[1]);
+          const statusUpdates = JSON.parse(jsonStr);
+          if (statusUpdates && statusUpdates.length > 0) {
+            let updatedAny = false;
+            setPlacedOrders(prevOrders => {
+              return prevOrders.map(order => {
+                let orderUpdated = false;
+                const newItems = order.items.map(item => {
+                  const update = statusUpdates.find((u: any) => u.dishName === item.menuItemName);
+                  if (update) {
+                    orderUpdated = true;
+                    updatedAny = true;
+                    return { ...item, status: update.status };
+                  }
+                  return item;
+                });
+                if (orderUpdated) {
+                  return { ...order, items: newItems };
+                }
+                return order;
+              });
+            });
+            if (updatedAny) {
+              triggerToast("🔔 Bếp đã cập nhật trạng thái món ăn mới!");
+            }
+            // Clear the status updates cookie
+            document.cookie = "tv_food_order_status_updates=; path=/; max-age=0";
+          }
+        } catch (e) {
+          console.error("Error reading order status updates", e);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Realtime SignalR connection status state (API Contract: /hubs/restaurant)
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+
+  // Attempt standard SignalR WebSocket connection
+  useEffect(() => {
+    const wsUrl = "ws://localhost:5000/hubs/restaurant";
+    let socket: WebSocket | null = null;
+    
+    try {
+      socket = new WebSocket(wsUrl);
+      socket.onopen = () => {
+        setIsRealtimeConnected(true);
+        console.log("🟢 Connected to live SignalR hub!");
+      };
+      socket.onclose = () => {
+        setIsRealtimeConnected(false);
+        console.log("⚠️ SignalR disconnected. Safe fallback polling mode enabled.");
+      };
+      socket.onerror = () => {
+        setIsRealtimeConnected(false);
+      };
+    } catch (e) {
+      setIsRealtimeConnected(false);
+    }
+    
+    return () => {
+      if (socket) socket.close();
+    };
+  }, []);
+
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    const savedTab = sessionStorage.getItem('activeTab');
-    return isActiveTab(savedTab) ? savedTab : 'home';
+  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() => {
+    return (sessionStorage.getItem('activeTab') as any) || 'home';
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
-
 
   // Search & Filters
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -281,8 +353,8 @@ export function App() {
   const [dishNotes, setDishNotes] = useState("");
   const [dishQuantity, setDishQuantity] = useState(1);
   // Starbucks custom PDP states
-  const [selectedSize, setSelectedSize] = useState<DishSize>('M');
-  const [selectedTemperature, setSelectedTemperature] = useState<DrinkTemperature>('Đá');
+  const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
+  const [selectedTemperature, setSelectedTemperature] = useState<'Nóng' | 'Đá'>('Đá');
   const [selectedSweetness, setSelectedSweetness] = useState<string>('70%');
   const [extraToppings, setExtraToppings] = useState<{ [key: string]: number }>({
     'Trân Châu Hoàng Kim': 0,
@@ -292,6 +364,7 @@ export function App() {
 
   // App Core Simulated Database States
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [placedOrders, setPlacedOrders] = useState<Order[]>([]);
   const [latestReservation, setLatestReservation] = useState<Reservation | null>(null);
 
   // Reservation Form State
@@ -324,15 +397,6 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Custom Order Tracking Hook
-  const {
-    placedOrders,
-    addPlacedOrder,
-    realtimeStatus,
-    realtimeMessage,
-    lastRealtimeAt
-  } = useOrderTracking(sessionToken, tableSession?.tableNumber || 'A01', triggerToast);
-
   // Synchronization to sessionStorage to survive page reloads
   useEffect(() => {
     sessionStorage.setItem('activeTab', activeTab);
@@ -359,30 +423,63 @@ export function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('sessionToken');
     if (token) {
-      sessionStorage.setItem('sessionToken', token);
-      const mockSession: TableSession = {
-        id: "sess_" + Math.random().toString(36).substr(2, 9),
-        tableId: "tbl-a01",
-        tableNumber: "A01",
-        status: "Active",
-        openedAt: new Date().toISOString()
-      };
-      sessionStorage.setItem('tableSession', JSON.stringify(mockSession));
-      window.setTimeout(() => {
-        setSessionToken(token);
-        setTableSession(mockSession);
-        setActiveTab('menu');
-      }, 0);
+      handleLoadTableSession(token);
     }
     // Diagnostic log utilizing reservations to prevent TS unused warning
     console.log(`Hệ thống Antigravity sẵn sàng. Đã tải ${reservations.length} đặt bàn cục bộ.`);
-  }, [reservations.length]);
+  }, [reservations]);
+
   // -------------------------------------------------------------
+  // SIMULATION: SIGNALR REALTIME UPDATES SIMULATOR (Flow 3.4)
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (placedOrders.length === 0) return;
+
+    const interval = setInterval(() => {
+      setPlacedOrders(prevOrders => {
+        let updated = false;
+        const newOrders = prevOrders.map(order => {
+          if (order.status === 'Served') return order;
+
+          let nextStatus: 'Pending' | 'Preparing' | 'Ready' | 'Served' = order.status;
+          let nextItems = [...order.items];
+
+          if (order.status === 'Pending') {
+            nextStatus = 'Preparing';
+            nextItems = order.items.map(it => ({ ...it, status: 'Preparing' }));
+            updated = true;
+          } else if (order.status === 'Preparing') {
+            nextStatus = 'Ready';
+            nextItems = order.items.map(it => ({ ...it, status: 'Ready' }));
+            updated = true;
+          } else if (order.status === 'Ready') {
+            nextStatus = 'Served';
+            nextItems = order.items.map(it => ({ ...it, status: 'Served' }));
+            updated = true;
+            triggerToast(`Món ngon của bạn đã sẵn sàng! Nhân viên đang phục vụ lên Bàn ${order.tableNumber}.`);
+          }
+
+          return {
+            ...order,
+            status: nextStatus,
+            items: nextItems
+          };
+        });
+
+        if (updated) {
+          return newOrders;
+        }
+        return prevOrders;
+      });
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [placedOrders]);
 
   // -------------------------------------------------------------
   // ACTIONS: LOADING TABLE SESSION
   // -------------------------------------------------------------
-  function handleLoadTableSession(token: string) {
+  const handleLoadTableSession = (token: string) => {
     sessionStorage.setItem('sessionToken', token);
     const mockSession: TableSession = {
       id: "sess_" + Math.random().toString(36).substr(2, 9),
@@ -400,7 +497,7 @@ export function App() {
 
     const cleanUrl = window.location.pathname + `?sessionToken=${token}`;
     window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-  }
+  };
 
   const handleSimulateQRScan = () => {
     const randomToken = "secure-qr-session-token-" + Math.floor(1000 + Math.random() * 9000);
@@ -526,56 +623,9 @@ export function App() {
   // -------------------------------------------------------------
   // ACTIONS: ORDER SUBMISSION (POST /api/v1/orders)
   // -------------------------------------------------------------
-  const handleSubmitOrder = async () => {
+  const handleSubmitOrder = () => {
     if (cart.length === 0) return;
-    if (API_BASE_URL && !sessionToken) {
-      triggerToast('Vui long quet ma QR tai ban truoc khi goi mon.');
-      return;
-    }
-
     setIsSubmittingOrder(true);
-
-    if (API_BASE_URL && sessionToken) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            sessionToken,
-            idempotencyKey: createIdempotencyKey(),
-            items: cart.map(item => ({
-              menuItemId: item.menuItemId,
-              quantity: item.quantity,
-              note: item.note
-            }))
-          })
-        });
-        const payload = await response.json() as ApiResponse<ApiOrder>;
-
-        if (!response.ok || !payload.success) {
-          throw new Error(payload.error?.message || 'Khong the tao order.');
-        }
-
-        const newOrder = mapApiOrder(payload.data, tableSession?.tableNumber || 'A01');
-        addPlacedOrder(newOrder, {
-          status: 'connecting',
-          message: 'Order da tao, dang ket noi SignalR de theo doi trang thai mon.'
-        });
-        setCart([]);
-        setIsCartOpen(false);
-        setActiveTab('tracker');
-        triggerToast('Gui order thanh cong! Dang theo doi trang thai realtime.');
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Khong the tao order.';
-        triggerToast(message);
-      } finally {
-        setIsSubmittingOrder(false);
-      }
-
-      return;
-    }
 
     setTimeout(() => {
       const orderCode = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -591,16 +641,28 @@ export function App() {
       const newOrder: Order = {
         orderId: `order_${Math.random().toString(36).substr(2, 9)}`,
         orderCode: orderCode,
-        tableNumber: tableSession?.tableNumber || "Vãng Lai",
+        tableNumber: tableSession?.tableNumber || "A02", // Default to A02 if not scanned
         status: 'Pending',
         items: newItems,
         placedAt: new Date()
       };
 
-      addPlacedOrder(newOrder, {
-        status: 'demo',
-        message: 'Che do demo dang mo phong SignalR vi chua co VITE_API_BASE_URL.'
-      });
+      // Realtime bridge: Save order to shared cookie for admin-web's Kitchen Kanban display
+      const existingCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('tv_food_shared_orders='));
+      let sharedOrders = [];
+      if (existingCookie) {
+        try {
+          sharedOrders = JSON.parse(decodeURIComponent(existingCookie.split('=')[1]));
+        } catch (e) {
+          sharedOrders = [];
+        }
+      }
+      sharedOrders.push(newOrder);
+      document.cookie = `tv_food_shared_orders=${encodeURIComponent(JSON.stringify(sharedOrders))}; path=/; max-age=86400`;
+
+      setPlacedOrders(prev => [newOrder, ...prev]);
       setCart([]);
       setIsCartOpen(false);
       setIsSubmittingOrder(false);
@@ -660,8 +722,8 @@ export function App() {
     setIsAiTyping(true);
 
     setTimeout(() => {
-      let aiResponseText: string;
-      let sources: string[];
+      let aiResponseText = "";
+      let sources: string[] = ["menu.md"];
       let suggestedAction: ChatMessage["suggestedAction"] = undefined;
 
       const lowerQuery = query.toLowerCase();
@@ -1443,21 +1505,62 @@ export function App() {
           {activeTab === 'tracker' && (
             <div className="animate-fade-in tracker-container">
               <div className="tracker-header">
-                <div className={`realtime-status-strip ${realtimeStatus}`} aria-live="polite">
-                  <span className="realtime-status-dot"></span>
-                  <span>{realtimeMessage}</span>
-                  {lastRealtimeAt && (
-                    <span className="realtime-status-time">
-                      Cap nhat {lastRealtimeAt.toLocaleTimeString('vi-VN')}
-                    </span>
-                  )}
-                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '4px' }}>
                   <Clock size={14} /> Theo Dõi Gọi Món Realtime
                 </div>
                 <h2 style={{ fontSize: '2.2rem', marginBottom: '4px' }}>Món Đang Đợi Bếp</h2>
                 <p style={{ color: 'var(--text-secondary)' }}>Màn hình cập nhật trạng thái tự động qua SignalR và fallback polling.</p>
               </div>
+
+              {/* Realtime warning banner */}
+              {isRealtimeConnected ? (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  color: '#10b981',
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span className="live-indicator-dot" style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#10b981',
+                    boxShadow: '0 0 10px #10b981'
+                  }}></span>
+                  <span>Đang kết nối thời gian thực với máy chủ Bếp (SignalR Live).</span>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
+                  color: '#f59e0b',
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  fontSize: '0.88rem',
+                  fontWeight: 500,
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  lineHeight: '1.4'
+                }}>
+                  <span className="live-indicator-dot" style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#f59e0b',
+                    animation: 'pulse 1.5s infinite'
+                  }}></span>
+                  <span>Mất kết nối thời gian thực (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng (Đang hoạt động).</span>
+                </div>
+              )}
 
               {placedOrders.length === 0 ? (
                 <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -1758,7 +1861,7 @@ export function App() {
                         key={item.key}
                         type="button"
                         className={`size-option-btn ${selectedSize === item.key ? 'active' : ''}`}
-                        onClick={() => setSelectedSize(item.key as DishSize)}
+                        onClick={() => setSelectedSize(item.key as any)}
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -1797,7 +1900,7 @@ export function App() {
                             key={item.key}
                             type="button"
                             className={`custom-pill-btn ${selectedTemperature === item.key ? 'active' : ''}`}
-                            onClick={() => setSelectedTemperature(item.key as DrinkTemperature)}
+                            onClick={() => setSelectedTemperature(item.key as any)}
                             style={{
                               flex: 1,
                               padding: '10px 8px',

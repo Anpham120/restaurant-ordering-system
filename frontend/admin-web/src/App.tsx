@@ -6,6 +6,8 @@ import {
   PlusCircle, ShoppingBag, Eye
 } from 'lucide-react';
 import './App.css';
+import { createRestaurantHubConnection } from './realtime/restaurantRealtime';
+import type { OrderItemReadyEvent } from './realtime/restaurantRealtime';
 
 // TypeScript interfaces for safety and robustness
 interface Table {
@@ -29,12 +31,14 @@ interface Reservation {
 
 interface OrderItem {
   id: string;
+  orderId?: string;
   tableId: string;
   dishName: string;
   quantity: number;
   note: string;
   status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
   timeAdded: string; // ISO string
+  source?: 'mock' | 'realtime';
 }
 
 interface InvoiceItem {
@@ -43,14 +47,47 @@ interface InvoiceItem {
   price: number;
 }
 
+type UserRole = 'Staff' | 'Kitchen' | 'Cashier' | 'Manager';
+
+function isUserRole(value: string | null): value is UserRole {
+  return value === 'Staff' || value === 'Kitchen' || value === 'Cashier' || value === 'Manager';
+}
+
+function upsertReadyOrderItem(items: OrderItem[], event: OrderItemReadyEvent): OrderItem[] {
+  const existingIndex = items.findIndex(item => item.id === event.orderItemId);
+
+  if (existingIndex >= 0) {
+    return items.map(item => item.id === event.orderItemId ? {
+      ...item,
+      orderId: event.orderId,
+      status: 'Ready',
+      timeAdded: event.readyAt ?? item.timeAdded,
+      source: 'realtime',
+    } : item);
+  }
+
+  return [{
+    id: event.orderItemId,
+    orderId: event.orderId,
+    tableId: event.tableId ?? event.tableNumber ?? 'unknown',
+    dishName: event.menuItemName ?? `Món #${event.orderItemId}`,
+    quantity: event.quantity ?? 1,
+    note: event.note ?? '',
+    status: 'Ready',
+    timeAdded: event.readyAt ?? new Date().toISOString(),
+    source: 'realtime',
+  }, ...items];
+}
+
 function App() {
   // Theme & Role Authentication states
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('admin_token') !== null;
   });
-  const [userRole, setUserRole] = useState<'Staff' | 'Kitchen' | 'Cashier' | 'Manager'>(() => {
-    return (sessionStorage.getItem('admin_role') as any) || 'Staff';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    const storedRole = sessionStorage.getItem('admin_role');
+    return isUserRole(storedRole) ? storedRole : 'Staff';
   });
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -79,7 +116,7 @@ function App() {
     { id: 'RES_003', name: 'Trần Minh Đức', phone: '0903334445', guests: 2, time: '17:30', note: 'Bàn sân vườn mát mẻ', status: 'Pending' },
   ]);
 
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([
+  const [orderItems, setOrderItems] = useState<OrderItem[]>(() => [
     { id: 'ORD_001', tableId: 'T102', dishName: 'Phở Bò Tày Đặc Biệt', quantity: 2, note: 'Ít bánh nhiều thịt, không hành', status: 'Preparing', timeAdded: new Date(Date.now() - 15 * 60000).toISOString() },
     { id: 'ORD_002', tableId: 'T102', dishName: 'Trà Đào Sả TV FOOD', quantity: 2, note: 'Ngọt 50%, nhiều đá', status: 'Ready', timeAdded: new Date(Date.now() - 10 * 60000).toISOString() },
     { id: 'ORD_003', tableId: 'T202', dishName: 'Bún Chả Nem Nướng', quantity: 3, note: 'Thêm nem nướng, nước mắm ấm', status: 'Pending', timeAdded: new Date(Date.now() - 5 * 60000).toISOString() },
@@ -112,8 +149,19 @@ function App() {
   const [aiReportOutput, setAiReportOutput] = useState('');
   const [activeTab, setActiveTab] = useState<'metrics' | 'orders' | 'report'>('metrics');
 
-  // Realtime banner warning state
-  const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
+  // SignalR connection state for ready-item notifications.
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [lastReadyEvent, setLastReadyEvent] = useState<OrderItemReadyEvent | null>(null);
+  const realtimeRoleEnabled = isAuthenticated && (userRole === 'Staff' || userRole === 'Manager');
+  const isRealtimeConnected = realtimeStatus === 'connected';
+
+  // Auto-dismiss the ready-event toast after 5 seconds
+  useEffect(() => {
+    if (!lastReadyEvent) return;
+    const timer = setTimeout(() => setLastReadyEvent(null), 5000);
+    return () => clearTimeout(timer);
+  }, [lastReadyEvent]);
 
   // Toggle Theme helper
   const toggleTheme = () => {
@@ -132,6 +180,47 @@ function App() {
   useEffect(() => {
     document.body.classList.add('light-theme');
   }, []);
+
+  useEffect(() => {
+    if (!realtimeRoleEnabled) {
+      return;
+    }
+
+    let isDisposed = false;
+    const connection = createRestaurantHubConnection();
+
+    const handleReadyItem = (event: OrderItemReadyEvent) => {
+      setLastReadyEvent(event);
+      setOrderItems(prev => upsertReadyOrderItem(prev, event));
+    };
+
+    connection.on('OrderItemReady', handleReadyItem);
+    connection.onreconnecting(() => {
+      if (!isDisposed) setRealtimeStatus('reconnecting');
+    });
+    connection.onreconnected(() => {
+      if (!isDisposed) setRealtimeStatus('connected');
+      setReconnectAttempt(0); // reset counter after successful reconnect
+    });
+    connection.onclose(() => {
+      if (!isDisposed) setRealtimeStatus('disconnected');
+    });
+
+    setRealtimeStatus('connecting');
+    connection.start()
+      .then(() => {
+        if (!isDisposed) setRealtimeStatus('connected');
+      })
+      .catch(() => {
+        if (!isDisposed) setRealtimeStatus('disconnected');
+      });
+
+    return () => {
+      isDisposed = true;
+      connection.off('OrderItemReady', handleReadyItem);
+      void connection.stop();
+    };
+  }, [realtimeRoleEnabled, reconnectAttempt]);
 
   // Handle Auth Login
   const handleLogin = (e: React.FormEvent) => {
@@ -162,6 +251,7 @@ function App() {
     sessionStorage.removeItem('admin_role');
     setIsAuthenticated(false);
     setSelectedTable(null);
+    setRealtimeStatus('disconnected');
   };
 
   // Simulate incoming customer order in Kitchen display
@@ -312,13 +402,13 @@ function App() {
     <div className="admin-app">
       
       {/* Realtime alerts fallback warning banner */}
-      {!isRealtimeConnected && (
+      {realtimeRoleEnabled && !isRealtimeConnected && (
         <div className="realtime-warning">
           <div className="warning-content">
             <AlertTriangle size={18} />
-            <span>Mất kết nối realtime với máy chủ (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng.</span>
+            <span>Mất kết nối realtime với máy chủ (SignalR). Danh sách món chờ phục vụ vẫn hiển thị dữ liệu gần nhất.</span>
           </div>
-          <button className="btn-reconnect" onClick={() => setIsRealtimeConnected(true)}>
+          <button className="btn-reconnect" onClick={() => setReconnectAttempt(prev => prev + 1)}>
             <RefreshCw size={14} /> Thử kết nối lại
           </button>
         </div>
@@ -341,8 +431,12 @@ function App() {
                 <span className={`role-pill pill-${userRole.toLowerCase()}`}>
                   <Layers size={13} /> {userRole}
                 </span>
-                <span className="live-session-indicator">
-                  <span className="indicator-glow"></span> Live
+                <span className={`live-session-indicator live-${realtimeStatus}`}>
+                  <span className="indicator-glow"></span>
+                  {realtimeStatus === 'connected' && 'Live'}
+                  {realtimeStatus === 'connecting' && 'Connecting'}
+                  {realtimeStatus === 'reconnecting' && 'Reconnecting'}
+                  {realtimeStatus === 'disconnected' && 'Offline'}
                 </span>
               </div>
 
@@ -392,7 +486,11 @@ function App() {
                   <select 
                     className="form-input" 
                     value={userRole} 
-                    onChange={(e) => setUserRole(e.target.value as any)}
+                    onChange={(e) => {
+                      if (isUserRole(e.target.value)) {
+                        setUserRole(e.target.value);
+                      }
+                    }}
                   >
                     <option value="Staff">Nhân Viên Phục Vụ (Staff)</option>
                     <option value="Kitchen">Đầu Bếp / Bếp Trưởng (Kitchen)</option>
@@ -674,7 +772,30 @@ function App() {
 
                   {/* Serving food items update notification */}
                   <div className="staff-serving-list-box">
-                    <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
+                    <div className="serving-header-row">
+                      <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
+                      <span className={`serving-realtime-badge badge-${realtimeStatus}`}>
+                        {realtimeStatus === 'connected' && 'SignalR'}
+                        {realtimeStatus === 'connecting' && 'Đang nối'}
+                        {realtimeStatus === 'reconnecting' && 'Nối lại'}
+                        {realtimeStatus === 'disconnected' && 'Mất nối'}
+                      </span>
+                    </div>
+                    {lastReadyEvent && (
+                      <div className="ready-event-toast">
+                        <CheckCircle size={14} />
+                        <span>
+                          {lastReadyEvent.tableNumber
+                            ? `Bàn ${lastReadyEvent.tableNumber}: `
+                            : lastReadyEvent.tableId
+                            ? `Bàn ${lastReadyEvent.tableId}: `
+                            : ''}
+                          <strong>
+                            {lastReadyEvent.menuItemName ?? `Món #${lastReadyEvent.orderItemId}`}
+                          </strong>{lastReadyEvent.quantity && lastReadyEvent.quantity > 1 ? ` ×${lastReadyEvent.quantity}` : ''} đã sẵn sàng phục vụ!
+                        </span>
+                      </div>
+                    )}
                     <div className="serving-items-scroll">
                       {orderItems.filter(i => itemStatusFilter(i, 'Ready')).length === 0 ? (
                         <div className="empty-box-inline">Không có món ăn nào đang chờ phục vụ.</div>
@@ -684,6 +805,7 @@ function App() {
                             <div className="serving-item-meta">
                               <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
                               <span>{item.dishName} (x{item.quantity})</span>
+                              {item.source === 'realtime' && <small>🔴 Realtime</small>}
                             </div>
                             <button 
                               className="btn-serve-item"

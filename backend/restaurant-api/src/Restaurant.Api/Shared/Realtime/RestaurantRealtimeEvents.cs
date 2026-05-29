@@ -10,3 +10,4 @@ public static class RestaurantRealtimeEvents
     public const string PaymentCompleted = nameof(PaymentCompleted);
     public const string DashboardUpdated = nameof(DashboardUpdated);
 }
+

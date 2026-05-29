@@ -31,9 +31,9 @@ public sealed class RestaurantRealtimeHub(ILogger<RestaurantRealtimeHub> logger)
         logger.LogInformation(
             "Connection {ConnectionId} joined group {GroupName}.",
             Context.ConnectionId,
-            RestaurantRealtimeGroups.KitchenDisplay);
+            RestaurantRealtimeGroups.Kitchen);
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.KitchenDisplay);
+        await Groups.AddToGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.Kitchen);
     }
 
     public async Task LeaveKitchenDisplayAsync()
@@ -41,8 +41,8 @@ public sealed class RestaurantRealtimeHub(ILogger<RestaurantRealtimeHub> logger)
         logger.LogInformation(
             "Connection {ConnectionId} left group {GroupName}.",
             Context.ConnectionId,
-            RestaurantRealtimeGroups.KitchenDisplay);
+            RestaurantRealtimeGroups.Kitchen);
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.KitchenDisplay);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, RestaurantRealtimeGroups.Kitchen);
     }
 }

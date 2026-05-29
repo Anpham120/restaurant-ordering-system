@@ -1,4 +1,6 @@
 using Restaurant.Api.Hubs;
+using Restaurant.Api.Modules.Billing;
+using Restaurant.Api.Modules.Ordering;
 using Restaurant.Api.Modules.Orders;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
@@ -6,9 +8,8 @@ using Restaurant.Api.Services;
 using Restaurant.Application;
 using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure;
-using Restaurant.Api.Modules.Billing;
-using Restaurant.Api.Modules.Ordering;
-using Restaurant.Api.Shared.Realtime;
+using IRealtimePublisher = Restaurant.Api.Shared.Realtime.IRestaurantRealtimePublisher;
+using RealtimePublisher = Restaurant.Api.Shared.Realtime.SignalRRestaurantRealtimePublisher;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<IRestaurantRealtimePublisher, SignalRRestaurantRealtimePublisher>();
+builder.Services.AddSingleton<IRealtimePublisher, RealtimePublisher>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
@@ -79,9 +80,6 @@ app.UseAuthorization();
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.MapHealthChecks("/health");
-app.MapHub<RestaurantHub>("/hubs/restaurant");
-
-// ── SignalR Hub ───────────────────────────────────────────────────────────────
 app.MapHub<RestaurantHub>("/hubs/restaurant")
    .RequireCors("AdminWebPolicy");
 

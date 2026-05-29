@@ -96,6 +96,17 @@
   border-radius: 9999px;
 }
 
+.live-connecting,
+.live-reconnecting {
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+}
+
+.live-disconnected {
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+}
+
 .indicator-glow {
   width: 8px;
   height: 8px;
@@ -103,21 +114,36 @@
   background-color: var(--success);
   box-shadow: 0 0 8px var(--success);
   animation: blink-pulse 2s infinite;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Glow dot color reflects SignalR connection state */
+.live-connecting .indicator-glow,
+.live-reconnecting .indicator-glow {
+  background-color: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+  animation: blink-pulse 0.8s infinite;
+}
+
+.live-disconnected .indicator-glow {
+  background-color: var(--danger);
+  box-shadow: 0 0 6px var(--danger);
+  animation: none;
 }
 
 @keyframes blink-pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%   { opacity: 0.4; }
+  50%  { opacity: 1; }
   100% { opacity: 0.4; }
 }
 
-/* Quick developer role switchers to make review and usage incredibly fast */
+/* Quick developer role switchers */
 .quick-role-selector {
   display: flex;
   align-items: center;
   background-color: var(--bg-surface-elevated);
   padding: 4px;
-  border-radius: var(--radius-md) !important; /* 12px bo góc */
+  border-radius: var(--radius-md) !important;
   border: 1px solid var(--border-color);
   gap: 2px;
 }
@@ -158,7 +184,6 @@
   align-items: center;
   gap: 10px;
 }
-
 .btn-icon-circle {
   width: 38px;
   height: 38px;
@@ -684,9 +709,50 @@
 
 .staff-serving-list-box h3 {
   font-size: 1.1rem;
+}
+
+.serving-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 8px;
+}
+
+.serving-realtime-badge {
+  flex-shrink: 0;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--success-text);
+  background-color: var(--success-bg);
+}
+
+.badge-connecting,
+.badge-reconnecting {
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+}
+
+.badge-disconnected {
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+}
+
+.ready-event-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .serving-items-scroll {
@@ -723,6 +789,21 @@
 
 .serving-item-meta strong {
   color: var(--primary);
+}
+
+.serving-item-meta small {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--success-text);
+  background-color: var(--success-bg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  margin-top: 3px;
+  width: fit-content;
 }
 
 .btn-serve-item {

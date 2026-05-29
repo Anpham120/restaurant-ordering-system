@@ -58,7 +58,7 @@ infrastructure/docker-compose.local.yml
 - OpenAPI trong môi trường development.
 - Health check tại `GET /health`.
 - HTTPS redirection, ngoại trừ `/health`.
-- Endpoint mẫu `/weatherforecast` từ template.
+- Endpoint mẫu `/weatherforecast` từ template. Endpoint này chỉ dùng để xác nhận skeleton chạy được và phải xóa khi có API nghiệp vụ thật thay thế.
 
 Các phần sau là mục tiêu kiến trúc và có thể được tạo dần theo issue:
 
@@ -443,6 +443,7 @@ GET /health
 - Không đưa secret, connection string thật hoặc API key vào repository.
 - Không để AI Service, Redis hoặc external provider là single point of failure cho core flow.
 - Không dùng `/weatherforecast` như API nghiệp vụ thật.
+- Không để lại code mẫu, endpoint thử, seed tạm hoặc dữ liệu test trong runtime production; demo data phải có script seed/reset riêng.
 
 ---
 

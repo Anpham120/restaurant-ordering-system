@@ -3,6 +3,7 @@ using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
 using Restaurant.Api.Modules.Billing;
+using Restaurant.Api.Modules.Ordering;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,7 @@ app.MapHealthChecks("/health");
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+app.MapOrdersEndpoints();
 
 // Table module
 app.MapTableEndpoints();

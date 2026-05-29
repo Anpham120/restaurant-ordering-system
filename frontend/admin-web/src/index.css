@@ -1,0 +1,278 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Global Reset & Base Styling */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Light Theme (Zapier-Inspired Coffee & Saturated Orange) */
+  --bg-deep: #fffefb; /* Warm cream canvas page background */
+  --bg-surface: #f8f4f0; /* Soft cream card background */
+  --bg-surface-elevated: #ede9e3; /* Slightly elevated warm cream */
+
+  --primary-rgb: 255, 79, 0; /* Saturated Zapier Orange Accent (#ff4f00) */
+  --primary: rgb(var(--primary-rgb));
+  --primary-hover: #e64700; /* Saturated orange deep hover */
+  --primary-glow: rgba(var(--primary-rgb), 0.15);
+
+  --secondary: #201515; /* Deep coffee ink for secondary elements */
+  --secondary-glow: rgba(32, 21, 21, 0.12);
+
+  --text-primary: #201515; /* Deep coffee ink for absolute legibility */
+  --text-secondary: #605d52; /* Default warm body text color */
+  --text-muted: #939084; /* Metadata body-mid coffee neutral */
+  --text-on-primary: #fffefb;
+
+  --border-color: rgba(32, 21, 21, 0.08); /* Coffee hairline divider */
+  --border-focus: #ff4f00;
+  --border-hover: rgba(32, 21, 21, 0.16);
+
+  --glass-bg: rgba(255, 254, 251, 0.90);
+  --glass-card-bg: rgba(248, 244, 240, 0.75);
+  
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.08);
+  --success-text: #2e7d32;
+  --success-border: rgba(46, 125, 50, 0.15);
+
+  --warning: #e65100;
+  --warning-bg: rgba(255, 183, 77, 0.08);
+  --warning-text: #e65100;
+  --warning-border: rgba(255, 183, 77, 0.15);
+
+  --danger: #d84300;
+  --danger-bg: rgba(255, 79, 0, 0.08);
+  --danger-text: #d84300;
+  --danger-border: rgba(255, 79, 0, 0.15);
+
+  --info: #0288d1;
+  --info-bg: rgba(2, 136, 209, 0.08);
+  --info-text: #0288d1;
+  --info-border: rgba(2, 136, 209, 0.15);
+
+  --font-heading: 'Outfit', 'Inter', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px; /* Canonical Zapier button and card radius */
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --shadow-sm: 0 0 0.5px rgba(32, 21, 21, 0.14), 0 1px 2px rgba(32, 21, 21, 0.1);
+  --shadow-md: 0 2px 6px rgba(32, 21, 21, 0.06), 0 4px 12px rgba(32, 21, 21, 0.08);
+  --shadow-lg: 0 1px 3px rgba(32, 21, 21, 0.08), 0 8px 16px rgba(32, 21, 21, 0.08);
+  --shadow-glow: 0 0 20px var(--primary-glow);
+}
+
+body.dark-theme {
+  /* Dark Theme (Deep Roasted Coffee grounds & Orange highlights) */
+  --bg-deep: #150f0f; /* Deep warm roasted coffee background */
+  --bg-surface: #201515; /* Canonical Deep coffee ink */
+  --bg-surface-elevated: #2f2323; /* Slightly elevated coffee card surface */
+
+  --primary-hover: #e64700;
+  --primary-glow: rgba(var(--primary-rgb), 0.25);
+
+  --secondary: #fffefb; /* Warm cream secondary white */
+  --secondary-glow: rgba(255, 254, 251, 0.15);
+  --text-primary: #fffefb; /* Warm white canvas text */
+  --text-secondary: #c5c0b1; /* Soft cream neutral mute */
+  --text-muted: #939084; /* Muted body-mid coffee neutral */
+
+  --border-color: rgba(255, 254, 251, 0.08); /* Coffee hairline divider */
+  --border-hover: rgba(255, 254, 251, 0.16);
+
+  --glass-bg: rgba(32, 21, 21, 0.90);
+  --glass-card-bg: rgba(255, 254, 251, 0.02);
+  
+  --success-bg: rgba(46, 125, 50, 0.15);
+  --success-text: #81c784;
+  --success-border: rgba(46, 125, 50, 0.25);
+
+  --warning-bg: rgba(255, 183, 77, 0.15);
+  --warning-text: #ffe082;
+  --warning-border: rgba(255, 183, 77, 0.25);
+
+  --danger-bg: rgba(255, 79, 0, 0.15);
+  --danger-text: #ffb74d;
+  --danger-border: rgba(255, 79, 0, 0.25);
+
+  --info-bg: rgba(41, 182, 246, 0.15);
+  --info-text: #81d4fa;
+  --info-border: rgba(41, 182, 246, 0.25);
+
+  --shadow-sm: 0 0 0.5px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 12px rgba(21, 15, 15, 0.3), 0 2px 4px rgba(21, 15, 15, 0.15);
+  --shadow-lg: 0 1px 3px rgba(0,0,0,0.15), 0 12px 20px rgba(21, 15, 15, 0.4);
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography elements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Utility layout components */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Button variants strictly complying with rounded-md 12px Zapier rule */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--radius-md) !important; /* 12px bo góc Zapier */
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--text-on-primary);
+  box-shadow: 0 2px 4px rgba(var(--primary-rgb), 0.15);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--bg-deep);
+}
+
+.btn-secondary:hover {
+  opacity: 0.9;
+}
+
+.btn-tertiary {
+  background-color: transparent;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.btn-tertiary:hover {
+  background-color: rgba(32, 21, 21, 0.04);
+}
+
+body.dark-theme .btn-tertiary:hover {
+  background-color: rgba(255, 254, 251, 0.04);
+}
+
+.btn-text {
+  background-color: transparent;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+}
+
+.btn-text:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+}
+
+/* Inputs & Form Controls */
+.form-group {
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+.form-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-deep);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+/* Badges with no uppercase displayed as pill shape */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}

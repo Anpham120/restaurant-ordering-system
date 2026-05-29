@@ -1,6 +1,8 @@
+using Restaurant.Api.Modules.Reservation;
+using Restaurant.Api.Modules.Restaurant;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
-using Restaurant.Api.Modules.Restaurant;
+using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Shared.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +22,8 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ManagerOnly", policy =>
         policy.RequireAuthenticatedUser());
+    options.AddPolicy("CashierOrManager", policy =>
+        policy.RequireRole("Cashier", "Manager"));
 });
 
 var app = builder.Build();
@@ -44,5 +48,16 @@ app.MapHub<RestaurantHub>("/hubs/restaurant");
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+
+// Table module
+app.MapTableEndpoints();
+
+// Reservation module
+app.MapReservationCheckInEndpoints();
+app.MapReservationEndpoints();
+app.MapTableSessionEndpoints();
+
+// Billing module
+app.MapBillingEndpoints();
 
 app.Run();

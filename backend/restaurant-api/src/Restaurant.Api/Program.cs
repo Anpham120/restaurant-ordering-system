@@ -1,36 +1,55 @@
 using Restaurant.Api.Hubs;
+using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Kitchen;
+using Restaurant.Api.Modules.Orders;
 using Restaurant.Api.Modules.Ordering;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
+using Restaurant.Api.Services;
 using Restaurant.Application;
+using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure;
-using Restaurant.Api.Modules.Billing;
+using IRealtimePublisher = Restaurant.Api.Shared.Realtime.IRestaurantRealtimePublisher;
+using RealtimePublisher = Restaurant.Api.Shared.Realtime.SignalRRestaurantRealtimePublisher;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// ── Core services ─────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
-builder.Services.AddSignalR();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("FrontendDev", policy =>
-        policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:5174",
-                "http://127.0.0.1:5174")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
-});
+builder.Services.AddSingleton<IRealtimePublisher, RealtimePublisher>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-// Authorization – "ManagerOnly" policy placeholder (JWT wired in Issue #11)
+// ── SignalR ───────────────────────────────────────────────────────────────────
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
+
+// Register the hub service so Application-layer use-cases can broadcast without
+// taking a direct dependency on SignalR (keeping the Application layer clean).
+builder.Services.AddScoped<IRestaurantHubService, RestaurantHubService>();
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Allow the admin-web dev-server to connect to the SignalR hub via WebSocket.
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? ["http://localhost:5173", "http://localhost:4173"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AdminWebPolicy", policy =>
+    {
+        policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Required for SignalR WebSocket handshake
+    });
+});
+
+// ── Authorization ─────────────────────────────────────────────────────────────
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization(options =>
 {
@@ -42,7 +61,7 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ── HTTP pipeline ─────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -53,16 +72,22 @@ app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), appBuilder =
     appBuilder.UseHttpsRedirection();
 });
 
-app.UseCors("FrontendDev");
+// CORS must come before Authentication/Authorization and before MapHub
+app.UseCors("AdminWebPolicy");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ── Health check ──────────────────────────────────────────────────────────────
 app.MapHealthChecks("/health");
-app.MapHub<RestaurantHub>("/hubs/restaurant");
+app.MapHub<RestaurantHub>("/hubs/restaurant")
+   .RequireCors("AdminWebPolicy");
 
+// ── REST Endpoints ────────────────────────────────────────────────────────────
 // Menu module
 app.MapMenuCategoriesEndpoints();
 app.MapMenuItemsEndpoints();
+app.MapOrdersEndpoints();
 
 // Table module
 app.MapTableEndpoints();
@@ -75,8 +100,10 @@ app.MapTableSessionEndpoints();
 // Billing module
 app.MapBillingEndpoints();
 
-// Ordering and Kitchen modules
-app.MapOrdersEndpoints();
+// Kitchen module
 app.MapKitchenEndpoints();
+
+// Order module
+app.MapOrderItemEndpoints();
 
 app.Run();

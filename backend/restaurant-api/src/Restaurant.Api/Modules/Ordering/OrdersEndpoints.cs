@@ -41,9 +41,7 @@ public static class OrdersEndpoints
 
         var result = await handler.HandleAsync(request, cancellationToken);
         if (!result.IsSuccess)
-        {
             return Error(result.StatusCode, result.ErrorCode!, result.ErrorMessage!, httpContext.TraceIdentifier);
-        }
 
         await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
             .SendAsync("NewOrderCreated", result.Event, cancellationToken);

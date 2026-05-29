@@ -47,6 +47,8 @@ public static class DependencyInjection
 
         services.AddScoped<IReservationCheckInStore, ReservationCheckInStore>();
         services.AddSingleton<ISessionTokenGenerator, SecureSessionTokenGenerator>();
+
+        // Ordering + Kitchen handlers
         services.AddScoped<CreateOrderHandler>();
         services.AddScoped<GetKitchenOrderItemsHandler>();
         services.AddScoped<UpdateKitchenOrderItemStatusHandler>();

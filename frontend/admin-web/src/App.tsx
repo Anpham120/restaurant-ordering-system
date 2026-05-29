@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
@@ -6,10 +6,10 @@ import {
   PlusCircle, ShoppingBag, Eye
 } from 'lucide-react';
 import './App.css';
+import { createRestaurantHubConnection } from './realtime/restaurantRealtime';
+import type { OrderItemReadyEvent } from './realtime/restaurantRealtime';
 
 // TypeScript interfaces for safety and robustness
-type AdminRole = 'Staff' | 'Kitchen' | 'Cashier' | 'Manager';
-
 interface Table {
   id: string;
   name: string;
@@ -32,47 +32,51 @@ interface Reservation {
 interface OrderItem {
   id: string;
   orderId?: string;
-  orderCode?: string;
   tableId: string;
-  tableNumber?: string;
   dishName: string;
   quantity: number;
   note: string;
   status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
   timeAdded: string; // ISO string
+  source?: 'mock' | 'realtime';
 }
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-}
-
-interface KitchenOrderItemDto {
-  id: string;
-  orderId: string;
-  orderCode: string;
-  tableId: string;
-  tableNumber: string;
-  menuItemName: string;
-  quantity: number;
-  note: string | null;
-  status: OrderItem['status'];
-  createdAt: string;
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7169';
-
-const getStoredAdminRole = (): AdminRole => {
-  const role = sessionStorage.getItem('admin_role');
-  return role === 'Staff' || role === 'Kitchen' || role === 'Cashier' || role === 'Manager'
-    ? role
-    : 'Staff';
-};
 
 interface InvoiceItem {
   dishName: string;
   quantity: number;
   price: number;
+}
+
+type UserRole = 'Staff' | 'Kitchen' | 'Cashier' | 'Manager';
+
+function isUserRole(value: string | null): value is UserRole {
+  return value === 'Staff' || value === 'Kitchen' || value === 'Cashier' || value === 'Manager';
+}
+
+function upsertReadyOrderItem(items: OrderItem[], event: OrderItemReadyEvent): OrderItem[] {
+  const existingIndex = items.findIndex(item => item.id === event.orderItemId);
+
+  if (existingIndex >= 0) {
+    return items.map(item => item.id === event.orderItemId ? {
+      ...item,
+      orderId: event.orderId,
+      status: 'Ready',
+      timeAdded: event.readyAt ?? item.timeAdded,
+      source: 'realtime',
+    } : item);
+  }
+
+  return [{
+    id: event.orderItemId,
+    orderId: event.orderId,
+    tableId: event.tableId ?? event.tableNumber ?? 'unknown',
+    dishName: event.menuItemName ?? `Món #${event.orderItemId}`,
+    quantity: event.quantity ?? 1,
+    note: event.note ?? '',
+    status: 'Ready',
+    timeAdded: event.readyAt ?? new Date().toISOString(),
+    source: 'realtime',
+  }, ...items];
 }
 
 function App() {
@@ -81,7 +85,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('admin_token') !== null;
   });
-  const [userRole, setUserRole] = useState<AdminRole>(getStoredAdminRole);
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    const storedRole = sessionStorage.getItem('admin_role');
+    return isUserRole(storedRole) ? storedRole : 'Staff';
+  });
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -142,136 +149,19 @@ function App() {
   const [aiReportOutput, setAiReportOutput] = useState('');
   const [activeTab, setActiveTab] = useState<'metrics' | 'orders' | 'report'>('metrics');
 
-  // Realtime banner warning state
-  const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
-  const connectionRef = React.useRef<{ stop: () => void; reconnect: () => void } | null>(null);
+  // SignalR connection state for ready-item notifications.
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [lastReadyEvent, setLastReadyEvent] = useState<OrderItemReadyEvent | null>(null);
+  const realtimeRoleEnabled = isAuthenticated && (userRole === 'Staff' || userRole === 'Manager');
+  const isRealtimeConnected = realtimeStatus === 'connected';
 
-  const mapKitchenOrderItem = (item: KitchenOrderItemDto): OrderItem => ({
-    id: item.id,
-    orderId: item.orderId,
-    orderCode: item.orderCode,
-    tableId: item.tableId,
-    tableNumber: item.tableNumber,
-    dishName: item.menuItemName,
-    quantity: item.quantity,
-    note: item.note ?? '',
-    status: item.status,
-    timeAdded: item.createdAt
-  });
-
-  const getTableLabel = (item: OrderItem) => {
-    if (item.tableNumber) return item.tableNumber;
-    return tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId;
-  };
-
-  const loadKitchenOrderItems = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/kitchen/order-items`, { signal });
-      if (!response.ok) throw new Error(`Kitchen API returned ${response.status}`);
-      const payload = await response.json() as ApiResponse<KitchenOrderItemDto[]>;
-      setOrderItems(payload.data.map(mapKitchenOrderItem));
-      setIsRealtimeConnected(true);
-    } catch {
-      if (!signal?.aborted) {
-        setIsRealtimeConnected(false);
-      }
-    }
-  }, []);
-
-  const connectRestaurantHub = useCallback(() => {
-    let socket: WebSocket | null = null;
-    let isStopped = false;
-    let reconnectTimer: number | undefined;
-    const realtimeEvents = new Set(['NewOrderCreated', 'OrderItemPreparing', 'OrderItemReady', 'OrderItemServed']);
-
-    const scheduleReconnect = () => {
-      if (isStopped || reconnectTimer !== undefined) return;
-      reconnectTimer = window.setTimeout(() => {
-        reconnectTimer = undefined;
-        void start();
-      }, 5000);
-    };
-
-    const start = async () => {
-      try {
-        if (reconnectTimer !== undefined) {
-          window.clearTimeout(reconnectTimer);
-          reconnectTimer = undefined;
-        }
-
-        const negotiateResponse = await fetch(`${API_BASE_URL}/hubs/restaurant/negotiate?negotiateVersion=1`, {
-          method: 'POST'
-        });
-        if (!negotiateResponse.ok) throw new Error(`SignalR negotiate returned ${negotiateResponse.status}`);
-
-        const negotiate = await negotiateResponse.json() as { url?: string; accessToken?: string; connectionToken?: string };
-        const hubUrl = new URL(negotiate.url ?? `${API_BASE_URL}/hubs/restaurant`);
-        hubUrl.protocol = hubUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-        if (negotiate.connectionToken) hubUrl.searchParams.set('id', negotiate.connectionToken);
-        if (negotiate.accessToken) hubUrl.searchParams.set('access_token', negotiate.accessToken);
-
-        socket = new WebSocket(hubUrl);
-        socket.onopen = () => {
-          setIsRealtimeConnected(true);
-          socket?.send(`${JSON.stringify({ protocol: 'json', version: 1 })}\u001e`);
-        };
-        socket.onmessage = (event) => {
-          const frames = String(event.data).split('\u001e').filter(Boolean);
-          for (const frame of frames) {
-            const message = JSON.parse(frame) as { type?: number; target?: string };
-            if (message.type === 1 && message.target && realtimeEvents.has(message.target)) {
-              void loadKitchenOrderItems();
-            }
-          }
-        };
-        socket.onerror = () => setIsRealtimeConnected(false);
-        socket.onclose = () => {
-          setIsRealtimeConnected(false);
-          scheduleReconnect();
-        };
-      } catch {
-        setIsRealtimeConnected(false);
-        scheduleReconnect();
-      }
-    };
-
-    void start();
-
-    return {
-      stop: () => {
-        isStopped = true;
-        if (reconnectTimer !== undefined) {
-          window.clearTimeout(reconnectTimer);
-          reconnectTimer = undefined;
-        }
-        socket?.close();
-      },
-      reconnect: () => {
-        isStopped = false;
-        socket?.close();
-        void start();
-      }
-    };
-  }, [loadKitchenOrderItems]);
-
+  // Auto-dismiss the ready-event toast after 5 seconds
   useEffect(() => {
-    if (!isAuthenticated || (userRole !== 'Kitchen' && userRole !== 'Manager')) return;
-
-    const controller = new AbortController();
-    window.setTimeout(() => void loadKitchenOrderItems(controller.signal), 0);
-    const connection = connectRestaurantHub();
-    connectionRef.current = connection;
-    const pollingId = window.setInterval(() => {
-      void loadKitchenOrderItems(controller.signal);
-    }, 15000);
-
-    return () => {
-      controller.abort();
-      window.clearInterval(pollingId);
-      connection.stop();
-      connectionRef.current = null;
-    };
-  }, [connectRestaurantHub, isAuthenticated, loadKitchenOrderItems, userRole]);
+    if (!lastReadyEvent) return;
+    const timer = setTimeout(() => setLastReadyEvent(null), 5000);
+    return () => clearTimeout(timer);
+  }, [lastReadyEvent]);
 
   // Toggle Theme helper
   const toggleTheme = () => {
@@ -290,6 +180,47 @@ function App() {
   useEffect(() => {
     document.body.classList.add('light-theme');
   }, []);
+
+  useEffect(() => {
+    if (!realtimeRoleEnabled) {
+      return;
+    }
+
+    let isDisposed = false;
+    const connection = createRestaurantHubConnection();
+
+    const handleReadyItem = (event: OrderItemReadyEvent) => {
+      setLastReadyEvent(event);
+      setOrderItems(prev => upsertReadyOrderItem(prev, event));
+    };
+
+    connection.on('OrderItemReady', handleReadyItem);
+    connection.onreconnecting(() => {
+      if (!isDisposed) setRealtimeStatus('reconnecting');
+    });
+    connection.onreconnected(() => {
+      if (!isDisposed) setRealtimeStatus('connected');
+      setReconnectAttempt(0); // reset counter after successful reconnect
+    });
+    connection.onclose(() => {
+      if (!isDisposed) setRealtimeStatus('disconnected');
+    });
+
+    setRealtimeStatus('connecting');
+    connection.start()
+      .then(() => {
+        if (!isDisposed) setRealtimeStatus('connected');
+      })
+      .catch(() => {
+        if (!isDisposed) setRealtimeStatus('disconnected');
+      });
+
+    return () => {
+      isDisposed = true;
+      connection.off('OrderItemReady', handleReadyItem);
+      void connection.stop();
+    };
+  }, [realtimeRoleEnabled, reconnectAttempt]);
 
   // Handle Auth Login
   const handleLogin = (e: React.FormEvent) => {
@@ -320,6 +251,7 @@ function App() {
     sessionStorage.removeItem('admin_role');
     setIsAuthenticated(false);
     setSelectedTable(null);
+    setRealtimeStatus('disconnected');
   };
 
   // Simulate incoming customer order in Kitchen display
@@ -345,33 +277,17 @@ function App() {
   };
 
   // Advance Order Item status in Bếp Kanban column
-  const advanceOrderStatus = async (itemId: string) => {
-    const currentItem = orderItems.find(item => item.id === itemId);
-    if (!currentItem) return;
-
-    let nextStatus: OrderItem['status'] = 'Pending';
-    if (currentItem.status === 'Pending') nextStatus = 'Preparing';
-    else if (currentItem.status === 'Preparing') nextStatus = 'Ready';
-    else if (currentItem.status === 'Ready') nextStatus = 'Served';
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/kitchen/order-items/${itemId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
-      });
-
-      if (!response.ok) throw new Error(`Kitchen status API returned ${response.status}`);
-      await loadKitchenOrderItems();
-    } catch {
-      setIsRealtimeConnected(false);
-      setOrderItems(prev => prev.map(item => {
+  const advanceOrderStatus = (itemId: string) => {
+    setOrderItems(prev => prev.map(item => {
       if (item.id === itemId) {
+        let nextStatus: OrderItem['status'] = 'Pending';
+        if (item.status === 'Pending') nextStatus = 'Preparing';
+        else if (item.status === 'Preparing') nextStatus = 'Ready';
+        else if (item.status === 'Ready') nextStatus = 'Served';
         return { ...item, status: nextStatus };
       }
       return item;
     }));
-    }
   };
 
   // Directly Served order item (Staff role action)
@@ -486,16 +402,13 @@ function App() {
     <div className="admin-app">
       
       {/* Realtime alerts fallback warning banner */}
-      {!isRealtimeConnected && (
+      {realtimeRoleEnabled && !isRealtimeConnected && (
         <div className="realtime-warning">
           <div className="warning-content">
             <AlertTriangle size={18} />
-            <span>Mất kết nối realtime với máy chủ (SignalR). Hệ thống đã tự động chuyển sang chế độ Polling dự phòng.</span>
+            <span>Mất kết nối realtime với máy chủ (SignalR). Danh sách món chờ phục vụ vẫn hiển thị dữ liệu gần nhất.</span>
           </div>
-          <button className="btn-reconnect" onClick={() => {
-            void loadKitchenOrderItems();
-            connectionRef.current?.reconnect();
-          }}>
+          <button className="btn-reconnect" onClick={() => setReconnectAttempt(prev => prev + 1)}>
             <RefreshCw size={14} /> Thử kết nối lại
           </button>
         </div>
@@ -518,8 +431,12 @@ function App() {
                 <span className={`role-pill pill-${userRole.toLowerCase()}`}>
                   <Layers size={13} /> {userRole}
                 </span>
-                <span className="live-session-indicator">
-                  <span className="indicator-glow"></span> Live
+                <span className={`live-session-indicator live-${realtimeStatus}`}>
+                  <span className="indicator-glow"></span>
+                  {realtimeStatus === 'connected' && 'Live'}
+                  {realtimeStatus === 'connecting' && 'Connecting'}
+                  {realtimeStatus === 'reconnecting' && 'Reconnecting'}
+                  {realtimeStatus === 'disconnected' && 'Offline'}
                 </span>
               </div>
 
@@ -569,7 +486,11 @@ function App() {
                   <select 
                     className="form-input" 
                     value={userRole} 
-                    onChange={(e) => setUserRole(e.target.value as AdminRole)}
+                    onChange={(e) => {
+                      if (isUserRole(e.target.value)) {
+                        setUserRole(e.target.value);
+                      }
+                    }}
                   >
                     <option value="Staff">Nhân Viên Phục Vụ (Staff)</option>
                     <option value="Kitchen">Đầu Bếp / Bếp Trưởng (Kitchen)</option>
@@ -851,7 +772,30 @@ function App() {
 
                   {/* Serving food items update notification */}
                   <div className="staff-serving-list-box">
-                    <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
+                    <div className="serving-header-row">
+                      <h3>Món Chín Chờ Phục Vụ ({orderItems.filter(i => itemStatusFilter(i, 'Ready')).length})</h3>
+                      <span className={`serving-realtime-badge badge-${realtimeStatus}`}>
+                        {realtimeStatus === 'connected' && 'SignalR'}
+                        {realtimeStatus === 'connecting' && 'Đang nối'}
+                        {realtimeStatus === 'reconnecting' && 'Nối lại'}
+                        {realtimeStatus === 'disconnected' && 'Mất nối'}
+                      </span>
+                    </div>
+                    {lastReadyEvent && (
+                      <div className="ready-event-toast">
+                        <CheckCircle size={14} />
+                        <span>
+                          {lastReadyEvent.tableNumber
+                            ? `Bàn ${lastReadyEvent.tableNumber}: `
+                            : lastReadyEvent.tableId
+                            ? `Bàn ${lastReadyEvent.tableId}: `
+                            : ''}
+                          <strong>
+                            {lastReadyEvent.menuItemName ?? `Món #${lastReadyEvent.orderItemId}`}
+                          </strong>{lastReadyEvent.quantity && lastReadyEvent.quantity > 1 ? ` ×${lastReadyEvent.quantity}` : ''} đã sẵn sàng phục vụ!
+                        </span>
+                      </div>
+                    )}
                     <div className="serving-items-scroll">
                       {orderItems.filter(i => itemStatusFilter(i, 'Ready')).length === 0 ? (
                         <div className="empty-box-inline">Không có món ăn nào đang chờ phục vụ.</div>
@@ -861,6 +805,7 @@ function App() {
                             <div className="serving-item-meta">
                               <strong>Bàn: {tables.find(t => t.id === item.tableId)?.name || item.tableId}</strong>
                               <span>{item.dishName} (x{item.quantity})</span>
+                              {item.source === 'realtime' && <small>🔴 Realtime</small>}
                             </div>
                             <button 
                               className="btn-serve-item"
@@ -887,9 +832,6 @@ function App() {
                   </div>
 
                   <div className="panel-actions-group">
-                    <button className="btn btn-tertiary" onClick={() => void loadKitchenOrderItems()}>
-                      <RefreshCw size={16} /> Tải Lại Từ Bếp
-                    </button>
                     <button className="btn btn-tertiary" onClick={simulateIncomingOrder}>
                       <PlusCircle size={16} /> Giả Lập Order Mới
                     </button>
@@ -911,14 +853,14 @@ function App() {
                         orderItems.filter(i => itemStatusFilter(i, 'Pending')).map(item => (
                           <div key={item.id} className="kanban-item-card">
                             <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {getTableLabel(item)}</span>
+                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
                               <span className="item-time-waiting">
                                 <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
                               </span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
                             <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                            {item.note && <div className="item-note-box">{item.note}</div>}
+                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
                             
                             <button 
                               className="btn btn-primary btn-advance w-full mt-10"
@@ -944,14 +886,14 @@ function App() {
                         orderItems.filter(i => itemStatusFilter(i, 'Preparing')).map(item => (
                           <div key={item.id} className="kanban-item-card card-preparing-active">
                             <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {getTableLabel(item)}</span>
+                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
                               <span className="item-time-waiting">
                                 <Clock size={12} /> {getWaitTimeStr(item.timeAdded)} phút trước
                               </span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
                             <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                            {item.note && <div className="item-note-box">{item.note}</div>}
+                            {item.note && <div className="item-note-box">📝 {item.note}</div>}
                             
                             <button 
                               className="btn btn-secondary btn-advance w-full mt-10"
@@ -977,7 +919,7 @@ function App() {
                         orderItems.filter(i => itemStatusFilter(i, 'Ready')).map(item => (
                           <div key={item.id} className="kanban-item-card card-ready-active">
                             <div className="item-card-top">
-                              <span className="item-table-no">Bàn: {getTableLabel(item)}</span>
+                              <span className="item-table-no">Bàn: {tables.find(t => t.id === item.tableId)?.name.split(' ')[1] || item.tableId}</span>
                               <span className="item-time-waiting">Đã xong</span>
                             </div>
                             <h4 className="item-dish-name">{item.dishName}</h4>
@@ -1358,8 +1300,8 @@ function App() {
                         <tbody>
                           {orderItems.map(item => (
                             <tr key={item.id}>
-                              <td><strong>{item.orderCode || item.id}</strong></td>
-                              <td>{getTableLabel(item)}</td>
+                              <td><strong>{item.id}</strong></td>
+                              <td>{tables.find(t => t.id === item.tableId)?.name || item.tableId}</td>
                               <td>{item.dishName}</td>
                               <td>x{item.quantity}</td>
                               <td>

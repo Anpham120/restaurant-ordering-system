@@ -1,6 +1,8 @@
 using Restaurant.Api.Hubs;
 using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Kitchen;
+using Restaurant.Application.Features.Kitchen;
+using Restaurant.Infrastructure.Features.Kitchen;
 using Restaurant.Api.Modules.Orders;
 using Restaurant.Api.Modules.Ordering;
 using Restaurant.Api.Modules.Reservation;
@@ -26,13 +28,9 @@ builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
-
-// Register the hub service so Application-layer use-cases can broadcast without
-// taking a direct dependency on SignalR (keeping the Application layer clean).
 builder.Services.AddScoped<IRestaurantHubService, RestaurantHubService>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Allow the admin-web dev-server to connect to the SignalR hub via WebSocket.
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? ["http://localhost:5173", "http://localhost:4173"];
@@ -41,13 +39,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AdminWebPolicy", policy =>
     {
-        policy
-            .WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials(); // Required for SignalR WebSocket handshake
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     });
 });
+
+// Kitchen module DI
+builder.Services.AddScoped<IKitchenRepository, KitchenRepository>();
+builder.Services.AddScoped<GetKitchenOrderItemsUseCase>();
+builder.Services.AddScoped<UpdateOrderItemStatusUseCase>();
 
 // ── Authorization ─────────────────────────────────────────────────────────────
 builder.Services.AddAuthentication();

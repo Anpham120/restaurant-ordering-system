@@ -15,5 +15,5 @@ RUN dotnet publish "Restaurant.Api.csproj" -c Release -o /app/publish /p:UseAppH
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Restaurant.Api.dll"]

@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Restaurant.Api.Hubs;
 using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Identity;
@@ -21,7 +22,11 @@ using RealtimePublisher = Restaurant.Api.Shared.Realtime.SignalRRestaurantRealti
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Core services ─────────────────────────────────────────────────────────────
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Restaurant API", Version = "v1" });
+});
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton<IRealtimePublisher, RealtimePublisher>();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -87,7 +92,10 @@ await Restaurant.Infrastructure.Data.DatabaseSeeder.SeedAsync(app.Services);
 // ── HTTP pipeline ─────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger(options =>
+    {
+        options.RouteTemplate = "openapi/{documentName}.json";
+    });
 }
 
 app.UseWhen(ctx => !ctx.Request.Path.StartsWithSegments("/health"), appBuilder =>

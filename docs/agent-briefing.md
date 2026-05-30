@@ -94,7 +94,7 @@ Không task nào được làm hỏng luồng chính này.
 ```text
 restaurant-ordering-system/
 │
-├── RestaurantOrderingSystem.slnx
+├── RestaurantOrderingSystem.sln
 ├── README.md
 │
 ├── docs/
@@ -393,7 +393,7 @@ Docs-only:
 - Xác nhận không thay đổi API contract hoặc DB schema nếu issue không yêu cầu.
 
 Backend:
-- dotnet build RestaurantOrderingSystem.slnx
+- dotnet build RestaurantOrderingSystem.sln
 - dotnet test backend/restaurant-api/tests/Restaurant.UnitTests/Restaurant.UnitTests.csproj
 - dotnet test backend/restaurant-api/tests/Restaurant.IntegrationTests/Restaurant.IntegrationTests.csproj nếu có test liên quan
 - Gọi GET /health khi chạy API local

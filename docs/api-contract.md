@@ -1049,7 +1049,7 @@ Khi thay đổi file này, kiểm tra:
 Khi implementation backend đã có code, kiểm tra thêm:
 
 ```text
-dotnet build RestaurantOrderingSystem.slnx
+dotnet build RestaurantOrderingSystem.sln
 dotnet test backend/restaurant-api/tests/Restaurant.UnitTests/Restaurant.UnitTests.csproj
 dotnet test backend/restaurant-api/tests/Restaurant.IntegrationTests/Restaurant.IntegrationTests.csproj
 GET /health

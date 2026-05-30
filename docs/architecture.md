@@ -42,7 +42,7 @@ Trong phạm vi đồ án, hệ thống chọn Modular Monolith để:
 Tại thời điểm tài liệu này được cập nhật, repository đã có:
 
 ```text
-RestaurantOrderingSystem.slnx
+RestaurantOrderingSystem.sln
 backend/restaurant-api/src/Restaurant.Api/
 backend/restaurant-api/src/Restaurant.Application/
 backend/restaurant-api/src/Restaurant.Domain/

@@ -562,7 +562,7 @@ Khi thay đổi tài liệu schema:
 Khi đã có EF Core migration:
 
 ```text
-dotnet build RestaurantOrderingSystem.slnx
+dotnet build RestaurantOrderingSystem.sln
 dotnet ef database update --project backend/restaurant-api/src/Restaurant.Infrastructure --startup-project backend/restaurant-api/src/Restaurant.Api
 dotnet test backend/restaurant-api/tests/Restaurant.UnitTests/Restaurant.UnitTests.csproj
 dotnet test backend/restaurant-api/tests/Restaurant.IntegrationTests/Restaurant.IntegrationTests.csproj

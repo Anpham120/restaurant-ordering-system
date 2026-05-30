@@ -120,7 +120,7 @@ Nhóm sử dụng GitHub Issues để quản lý task. Mỗi issue tương ứng
 - README.md
 - docs/architecture.md
 - Cấu trúc thư mục
-- RestaurantOrderingSystem.slnx
+- RestaurantOrderingSystem.sln
 - Backend modules
 - AI Service
 - Docker Compose

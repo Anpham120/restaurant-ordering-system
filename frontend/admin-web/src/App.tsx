@@ -967,7 +967,7 @@ function App() {
               </div>
             )}
 
-            {/* 2. KITCHEN ROLE DASHBOARD (Kanban Screen) */}
+            {/* 2. KITCHEN ROLE DASHBOARD — TODO GĐ3 #107: replace with <KitchenDashboard /> */}
             {userRole === 'Kitchen' && (
               <div className="kitchen-panel-layout">
                 <div className="panel-header-row">

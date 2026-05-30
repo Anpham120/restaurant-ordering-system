@@ -137,14 +137,11 @@ FastAPI AI RAG Service
 
 ### 5.1. Frontend
 
-- React hoặc Next.js
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- TanStack Query
-- Zustand
-- React Hook Form
-- Zod
+- React 19 / TypeScript
+- Vanilla CSS (CSS thuần tối ưu hóa thẩm mỹ Premium nhã nhặn, không sử dụng Tailwind CSS)
+- Lucide React (Thư viện Icons trực quan)
+- TanStack Query / Zustand
+- React Hook Form / Zod
 - SignalR Client
 
 ### 5.2. Backend
@@ -578,6 +575,8 @@ Mỗi issue cần có:
 ### Pull Request
 
 Pull Request dùng để review và merge code từ feature branch vào `develop`.
+
+Commit message, tiêu đề Pull Request và mô tả Pull Request phải viết bằng tiếng Việt. Chỉ giữ nguyên tiếng Anh với tên lệnh, tên file, mã lỗi, keyword kỹ thuật hoặc nội dung trích dẫn từ công cụ.
 
 Mẫu mô tả Pull Request:
 

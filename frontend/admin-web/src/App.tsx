@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// TODO GĐ3 (#107): import { StaffDashboard } from './features/staff/StaffDashboard';
 import { 
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
@@ -470,7 +471,7 @@ function App() {
           /* Role Dashboard Panels */
           <div className="dashboard-content-area">
             
-            {/* 1. STAFF ROLE DASHBOARD */}
+            {/* 1. STAFF ROLE DASHBOARD — TODO GĐ3 #107: replace with <StaffDashboard /> */}
             {userRole === 'Staff' && (
               <div className="staff-panel-layout">
                 {/* Staff Sub-navigation Tabs */}

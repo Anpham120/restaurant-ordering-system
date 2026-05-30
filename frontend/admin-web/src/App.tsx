@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // TODO GĐ3 (#107): import { StaffDashboard } from './features/staff/StaffDashboard';
+import { CashierBillingPage } from './features/cashier/CashierBillingPage';
 import { 
   Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
   Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
@@ -37,12 +38,6 @@ interface OrderItem {
   note: string;
   status: 'Pending' | 'Preparing' | 'Ready' | 'Served';
   timeAdded: string; // ISO string
-}
-
-interface InvoiceItem {
-  dishName: string;
-  quantity: number;
-  price: number;
 }
 
 function App() {
@@ -104,11 +99,6 @@ function App() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   
-  // Cashier Billing states
-  const [billingTableId, setBillingTableId] = useState<string>('T102');
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'BankTransfer'>('Cash');
-  const [isPaidSuccess, setIsPaidSuccess] = useState(false);
-
   // Manager AI Operational Report states
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReportOutput, setAiReportOutput] = useState('');
@@ -258,19 +248,6 @@ function App() {
     setTimeout(() => setCopiedUrl(null), 2500);
   };
 
-  // Submit payment & clear active table session (Cashier Action)
-  const executePayment = (tableId: string) => {
-    // Remove active orders for this table
-    setOrderItems(prev => prev.filter(item => item.tableId !== tableId));
-    // Set table state to Cleaning
-    setTables(prev => prev.map(t => t.id === tableId ? { ...t, status: 'Cleaning', currentSessionId: undefined } : t));
-    
-    setIsPaidSuccess(true);
-    setTimeout(() => {
-      setIsPaidSuccess(false);
-    }, 3000);
-  };
-
   // Simulate generating Manager Daily AI operational report
   const generateAiReport = () => {
     setIsGeneratingReport(true);
@@ -305,22 +282,6 @@ function App() {
       }
     }, 10);
   };
-
-  // Get active session orders for Cashier checkout
-  const getBillingItems = (tableId: string): InvoiceItem[] => {
-    return orderItems
-      .filter(item => item.tableId === tableId)
-      .map(item => ({
-        dishName: item.dishName,
-        quantity: item.quantity,
-        price: menuPrices[item.dishName] || 45000
-      }));
-  };
-
-  const currentBillingItems = getBillingItems(billingTableId);
-  const billingSubtotal = currentBillingItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const billingTax = Math.round(billingSubtotal * 0.08); // 8% VAT
-  const billingGrandTotal = billingSubtotal + billingTax;
 
   return (
     <div className="admin-app">
@@ -1087,169 +1048,7 @@ function App() {
             )}
 
             {/* 3. CASHIER ROLE DASHBOARD */}
-            {userRole === 'Cashier' && (
-              <div className="cashier-panel-layout">
-                
-                {/* Left side: occupied tables list */}
-                <div className="occupied-tables-sidebar">
-                  <div className="sidebar-title-box">
-                    <h2>Bàn Đang Hoạt Động</h2>
-                    <p>Chọn bàn có phiên sử dụng để in hóa đơn và thanh toán.</p>
-                  </div>
-
-                  <div className="occupied-tables-scroll">
-                    {tables.filter(t => t.status === 'Occupied').length === 0 ? (
-                      <div className="empty-box-inline">Không có bàn nào đang có khách.</div>
-                    ) : (
-                      tables.filter(t => t.status === 'Occupied').map(table => (
-                        <div 
-                          key={table.id}
-                          className={`occupied-table-tile ${billingTableId === table.id ? 'active' : ''}`}
-                          onClick={() => setBillingTableId(table.id)}
-                        >
-                          <div className="occupied-tile-meta">
-                            <strong>{table.name}</strong>
-                            <span>{getBillingItems(table.id).length} Món ăn đã gọi</span>
-                          </div>
-                          <ChevronRight size={16} />
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Right side: Invoice bill & checkouts */}
-                <div className="billing-bill-section">
-                  {billingTableId && tables.find(t => t.id === billingTableId)?.status === 'Occupied' ? (
-                    <div className="invoice-box-card">
-                      
-                      <div className="invoice-header">
-                        <div className="invoice-brand-block">
-                          <img src="/logo.png" alt="TV FOOD" />
-                          <div>
-                            <h3>HÓA ĐƠN TẠM TÍNH</h3>
-                            <span>TV FOOD - Tinh hoa Thực Phẩm Sạch</span>
-                          </div>
-                        </div>
-                        <div className="invoice-meta-info">
-                          <span>Bàn: <strong>{tables.find(t => t.id === billingTableId)?.name}</strong></span>
-                          <span>Mã phiên: {tables.find(t => t.id === billingTableId)?.currentSessionId}</span>
-                          <span>Giờ in: {new Date().toLocaleTimeString('vi-VN')}</span>
-                        </div>
-                      </div>
-
-                      {/* Billing Items list table */}
-                      <div className="invoice-table-container">
-                        <table className="invoice-data-table">
-                          <thead>
-                            <tr>
-                              <th>Tên món ăn</th>
-                              <th>Số lượng</th>
-                              <th>Đơn giá</th>
-                              <th className="text-right">Thành tiền</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {currentBillingItems.length === 0 ? (
-                              <tr>
-                                <td colSpan={4} className="empty-invoice-row">Bàn này chưa đặt món nào.</td>
-                              </tr>
-                            ) : (
-                              currentBillingItems.map((item, idx) => (
-                                <tr key={idx}>
-                                  <td>{item.dishName}</td>
-                                  <td>x{item.quantity}</td>
-                                  <td>{item.price.toLocaleString()}đ</td>
-                                  <td className="text-right">{(item.price * item.quantity).toLocaleString()}đ</td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Summary prices calculations */}
-                      <div className="invoice-price-summary">
-                        <div className="summary-row">
-                          <span>Tạm tính (chưa thuế):</span>
-                          <span>{billingSubtotal.toLocaleString()}đ</span>
-                        </div>
-                        <div className="summary-row">
-                          <span>Thuế VAT (8%):</span>
-                          <span>{billingTax.toLocaleString()}đ</span>
-                        </div>
-                        <div className="summary-row grand-total-row">
-                          <span>Tổng cộng thanh toán:</span>
-                          <span>{billingGrandTotal.toLocaleString()}đ</span>
-                        </div>
-                      </div>
-
-                      {/* Payment Methods */}
-                      <div className="payment-method-selector-box">
-                        <span className="form-label">Phương thức thanh toán:</span>
-                        <div className="payment-methods-grid">
-                          <button 
-                            className={`payment-method-btn ${paymentMethod === 'Cash' ? 'active' : ''}`}
-                            onClick={() => setPaymentMethod('Cash')}
-                          >
-                            Tiền Mặt (Cash)
-                          </button>
-                          <button 
-                            className={`payment-method-btn ${paymentMethod === 'BankTransfer' ? 'active' : ''}`}
-                            onClick={() => setPaymentMethod('BankTransfer')}
-                          >
-                            Chuyển Khoản (Bank)
-                          </button>
-                        </div>
-
-                        {paymentMethod === 'BankTransfer' && (
-                          <div className="payment-bank-qr-mock">
-                            <div className="qr-graphic-box">
-                              {/* Standard mockup QR Payment box */}
-                              <div className="qr-mock-square">
-                                <div className="qr-corner qr-top-left"></div>
-                                <div className="qr-corner qr-top-right"></div>
-                                <div className="qr-corner qr-bottom-left"></div>
-                                <div className="qr-center-logo">TV FOOD</div>
-                              </div>
-                            </div>
-                            <div className="qr-bank-details">
-                              <strong>Mã VietQR Thanh Toán Nhanh</strong>
-                              <span>Số tiền: {billingGrandTotal.toLocaleString()}đ</span>
-                              <span>Nội dung: TVFOOD {billingTableId}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Checkout action buttons */}
-                      {isPaidSuccess && (
-                        <div className="success-toast-message">
-                          <CheckCircle size={16} /> Thanh toán hoàn tất! Bàn đã chuyển sang dọn dẹp.
-                        </div>
-                      )}
-
-                      <div className="invoice-actions-footer">
-                        <button 
-                          className="btn btn-primary w-full"
-                          onClick={() => executePayment(billingTableId)}
-                        >
-                          Xác Nhận Đã Thu Tiền & Giải Phóng Bàn
-                        </button>
-                      </div>
-
-                    </div>
-                  ) : (
-                    <div className="control-cardempty">
-                      <DollarSign size={48} />
-                      <h3>Chưa Chọn Bàn Thanh Toán</h3>
-                      <p>Vui lòng nhấp chọn một bàn đang có khách từ danh sách bên trái để kiểm tra hóa đơn.</p>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            )}
+            {userRole === 'Cashier' && <CashierBillingPage />}
 
             {/* 4. MANAGER ROLE DASHBOARD */}
             {userRole === 'Manager' && (

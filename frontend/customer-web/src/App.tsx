@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { env } from './config/env';
 import {
   Utensils,
   Calendar,
@@ -311,7 +312,7 @@ export function App() {
 
   // Attempt standard SignalR WebSocket connection
   useEffect(() => {
-    const wsUrl = "ws://localhost:5000/hubs/restaurant";
+    const wsUrl = env.hubUrl.replace('https://', 'wss://').replace('http://', 'ws://');
     let socket: WebSocket | null = null;
     
     try {

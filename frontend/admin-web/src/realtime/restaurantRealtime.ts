@@ -19,7 +19,7 @@ function getRestaurantHubUrl(): string {
     return explicitHubUrl;
   }
 
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:5001';
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5030';
   const backendOrigin = apiBaseUrl.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
 
   return `${backendOrigin}/hubs/restaurant`;

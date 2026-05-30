@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 // TODO GĐ3 (#107): import { StaffDashboard } from './features/staff/StaffDashboard';
 import { CashierBillingPage } from './features/cashier/CashierBillingPage';
-import { 
-  Coffee, Calendar, DollarSign, TrendingUp, Users, Clock, 
-  Play, Check, Sun, Moon, LogOut, ChevronRight, Copy, 
-  CheckCircle, RefreshCw, Send, AlertTriangle, Layers, 
-  PlusCircle, ShoppingBag, Eye, Wrench
+import { ManagerDashboardPage } from './features/manager/ManagerDashboardPage';
+import {
+  Coffee, Calendar, DollarSign, TrendingUp, Clock,
+  Play, Check, Sun, Moon, LogOut, ChevronRight, Copy,
+  CheckCircle, RefreshCw, AlertTriangle, Layers,
+  PlusCircle, Wrench
 } from 'lucide-react';
 import './App.css';
 
@@ -99,11 +100,6 @@ function App() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   
-  // Manager AI Operational Report states
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [aiReportOutput, setAiReportOutput] = useState('');
-  const [activeTab, setActiveTab] = useState<'metrics' | 'orders' | 'report'>('metrics');
-
   // Realtime banner warning state
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
 
@@ -248,40 +244,6 @@ function App() {
     setTimeout(() => setCopiedUrl(null), 2500);
   };
 
-  // Simulate generating Manager Daily AI operational report
-  const generateAiReport = () => {
-    setIsGeneratingReport(true);
-    setAiReportOutput('');
-    
-    const sampleText = `### BÁO CÁO VẬN HÀNH HÀNG NGÀY - TV FOOD (AI RAG ASSISTANT)
----
-* **Thời gian sinh báo cáo**: Hôm nay, lúc ${new Date().toLocaleTimeString('vi-VN')}
-* **Dữ liệu phân tích**: Hệ thống Monolith & RAG Knowledge Base
-
-#### 📈 1. Phân Tích Doanh Thu & Đơn Hàng
-* **Tổng doanh thu hôm nay**: **1,850,000 VND** (Đạt 115% so với mục tiêu ngày).
-* **Số đơn hàng đã hoàn thành**: **42 đơn** (Tăng 12% so với hôm qua).
-* **Giá trị trung bình mỗi đơn**: **44,047 VND** / đơn.
-
-#### ☕ 2. Sản Phẩm Bán Chạy & Khung Giờ Cao Điểm
-* **Món bán chạy nhất**: **Trà Đào Sả TV FOOD** (18 cốc) & **Phở Bò Tày Đặc Biệt** (14 tô).
-* **Khung giờ cao điểm**: Từ **11:30 - 13:30** (Chiếm 62% tổng lượng khách trong ngày) và **18:00 - 20:00**.
-
-#### ⚠️ 3. Cảnh Báo Vận Hành & Kiến Nghị Cải Tiến (Cost Warnings)
-* **Thời gian chờ chế biến tại Bếp**: Đang tăng nhẹ vào giờ trưa (trung bình 18 phút/món). Khuyến nghị tăng cường thêm 01 nhân viên phụ bếp vào khung giờ 11:00 - 14:00 để hỗ trợ sơ chế.
-* **Tỷ lệ thanh toán Bank Transfer**: Đạt **74%**, giảm thiểu đáng kể chi phí quản lý tiền mặt thủ công.
-* **Gợi ý khuyến mại ngày mai**: Đẩy mạnh bán kèm bánh ngọt vào khung giờ xế chiều (14:30 - 16:30) để nâng doanh thu giờ thấp điểm.`;
-
-    let i = 0;
-    const interval = setInterval(() => {
-      setAiReportOutput(prev => prev + sampleText.charAt(i));
-      i++;
-      if (i >= sampleText.length) {
-        clearInterval(interval);
-        setIsGeneratingReport(false);
-      }
-    }, 10);
-  };
 
   return (
     <div className="admin-app">
@@ -1051,274 +1013,7 @@ function App() {
             {userRole === 'Cashier' && <CashierBillingPage />}
 
             {/* 4. MANAGER ROLE DASHBOARD */}
-            {userRole === 'Manager' && (
-              <div className="manager-panel-layout">
-                
-                {/* Manager Tab switches */}
-                <div className="manager-tabs-bar">
-                  <button 
-                    className={`manager-tab-btn ${activeTab === 'metrics' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('metrics')}
-                  >
-                    <TrendingUp size={16} /> Tổng Quan Doanh Số
-                  </button>
-                  <button 
-                    className={`manager-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('orders')}
-                  >
-                    <ShoppingBag size={16} /> Giám Sát Đơn Hàng Realtime
-                  </button>
-                  <button 
-                    className={`manager-tab-btn ${activeTab === 'report' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('report')}
-                  >
-                    <Send size={16} /> AI Assistant Operational Report
-                  </button>
-                </div>
-
-                {/* Tab content 1: Metrics & charts */}
-                {activeTab === 'metrics' && (
-                  <div className="manager-tab-content active-metrics">
-                    
-                    {/* Top Row Cards */}
-                    <div className="manager-metrics-grid">
-                      <div className="metric-card-box">
-                        <div className="metric-icon bg-orange-light"><DollarSign size={20} /></div>
-                        <div className="metric-info">
-                          <span>Doanh Thu Hôm Nay</span>
-                          <h3>1,850,000 VND</h3>
-                        </div>
-                      </div>
-
-                      <div className="metric-card-box">
-                        <div className="metric-icon bg-blue-light"><ShoppingBag size={20} /></div>
-                        <div className="metric-info">
-                          <span>Số Đơn Hàng Hôm Nay</span>
-                          <h3>42 Đơn</h3>
-                        </div>
-                      </div>
-
-                      <div className="metric-card-box">
-                        <div className="metric-icon bg-green-light"><Users size={20} /></div>
-                        <div className="metric-info">
-                          <span>Bàn Đang Phục Vụ</span>
-                          <h3>{tables.filter(t => t.status === 'Occupied').length} Bàn</h3>
-                        </div>
-                      </div>
-
-                      <div className="metric-card-box">
-                        <div className="metric-icon bg-yellow-light"><Clock size={20} /></div>
-                        <div className="metric-info">
-                          <span>Món Đang Chờ Bếp</span>
-                          <h3>{orderItems.filter(i => itemStatusFilter(i, 'Pending') || itemStatusFilter(i, 'Preparing')).length} Món</h3>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chart & Top seller grids */}
-                    <div className="chart-seller-grid">
-                      
-                      {/* Interactive Bar Chart built in Pure HTML/CSS for premium Zapier feel */}
-                      <div className="chart-box-card">
-                        <h3>Lượng Đơn Hàng Theo Giờ</h3>
-                        <div className="css-bar-chart">
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '15%' }}></div>
-                            <span className="bar-label">08:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '25%' }}></div>
-                            <span className="bar-label">09:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '20%' }}></div>
-                            <span className="bar-label">10:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '45%' }}></div>
-                            <span className="bar-label">11:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill highlight-primary" style={{ height: '85%' }}></div>
-                            <span className="bar-label">12:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill highlight-primary" style={{ height: '70%' }}></div>
-                            <span className="bar-label">13:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '15%' }}></div>
-                            <span className="bar-label">14:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '20%' }}></div>
-                            <span className="bar-label">15:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '30%' }}></div>
-                            <span className="bar-label">16:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '55%' }}></div>
-                            <span className="bar-label">17:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill highlight-primary" style={{ height: '80%' }}></div>
-                            <span className="bar-label">18:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill highlight-primary" style={{ height: '95%' }}></div>
-                            <span className="bar-label">19:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '65%' }}></div>
-                            <span className="bar-label">20:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '40%' }}></div>
-                            <span className="bar-label">21:00</span>
-                          </div>
-                          <div className="chart-bar-container">
-                            <div className="chart-bar-fill" style={{ height: '10%' }}></div>
-                            <span className="bar-label">22:00</span>
-                          </div>
-                        </div>
-                        <span className="chart-legend-text">* Khung giờ 12:00 và 19:00 là thời điểm lượng khách tập trung đông nhất trong ngày.</span>
-                      </div>
-
-                      {/* Top items table */}
-                      <div className="seller-box-card">
-                        <h3>Sản Phẩm Bán Chạy Nhất</h3>
-                        <div className="seller-items-list">
-                          <div className="seller-item-row">
-                            <div className="seller-item-details">
-                              <strong>1. Trà Đào Sả TV FOOD</strong>
-                              <span>Đồ Uống / Topping thạch sả</span>
-                            </div>
-                            <span className="seller-count">18 Cốc</span>
-                          </div>
-                          <div className="seller-item-row">
-                            <div className="seller-item-details">
-                              <strong>2. Phở Bò Tày Đặc Biệt</strong>
-                              <span>Món Ăn / Súp bò hầm thảo mộc</span>
-                            </div>
-                            <span className="seller-count">14 Tô</span>
-                          </div>
-                          <div className="seller-item-row">
-                            <div className="seller-item-details">
-                              <strong>3. Cà Phê Muối TV</strong>
-                              <span>Đồ Uống / Kem mặn đặc sản</span>
-                            </div>
-                            <span className="seller-count">12 Ly</span>
-                          </div>
-                          <div className="seller-item-row">
-                            <div className="seller-item-details">
-                              <strong>4. Bánh Mì Chảo Đặc Biệt</strong>
-                              <span>Món Ăn / Pate trứng nóng sốt</span>
-                            </div>
-                            <span className="seller-count">9 Suất</span>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab content 2: Live order tracking list */}
-                {activeTab === 'orders' && (
-                  <div className="manager-tab-content active-orders">
-                    <h3>Giám Sát Tiến Độ Đơn Hàng Khách Tại Bàn</h3>
-                    <div className="manager-order-monitoring-table-container">
-                      <table className="manager-order-table">
-                        <thead>
-                          <tr>
-                            <th>Mã Đơn</th>
-                            <th>Bàn</th>
-                            <th>Món Ăn</th>
-                            <th>Số Lượng</th>
-                            <th>Trạng Thái Chế Biến</th>
-                            <th>Thời Gian Gọi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orderItems.map(item => (
-                            <tr key={item.id}>
-                              <td><strong>{item.id}</strong></td>
-                              <td>{tables.find(t => t.id === item.tableId)?.name || item.tableId}</td>
-                              <td>{item.dishName}</td>
-                              <td>x{item.quantity}</td>
-                              <td>
-                                <span className={`status-pill pill-${item.status.toLowerCase()}`}>
-                                  {item.status === 'Pending' && 'Chờ chế biến'}
-                                  {item.status === 'Preparing' && 'Đang nấu'}
-                                  {item.status === 'Ready' && 'Đã nấu chín'}
-                                  {item.status === 'Served' && 'Đã phục vụ'}
-                                </span>
-                              </td>
-                              <td>{new Date(item.timeAdded).toLocaleTimeString('vi-VN')}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab content 3: AI report operational */}
-                {activeTab === 'report' && (
-                  <div className="manager-tab-content active-report">
-                    <div className="ai-report-layout">
-                      <div className="ai-prompt-box">
-                        <h3>Trợ Lý Báo Cáo Thông Minh TV FOOD AI</h3>
-                        <p>Trợ lý ảo RAG tự động thu thập doanh số thực tế, phân tích khung giờ cao điểm và đánh giá hiệu năng bếp chế biến để sinh báo cáo hành động thông minh.</p>
-                        
-                        <div className="mock-prompt-container">
-                          <strong>Yêu cầu gửi AI Service:</strong>
-                          <pre className="prompt-pre">
-{`{
-  "system": "FastAPI AI RAG service",
-  "knowledge_base": "tv_food_operations_guide",
-  "today_metrics": {
-    "revenue": 1850000,
-    "completed_orders": 42,
-    "peak_hour": "12:00 & 19:00",
-    "top_item": "Trà Đào Sả TV FOOD",
-    "avg_prep_time_minutes": 18
-  }
-}`}
-                          </pre>
-                        </div>
-
-                        <button 
-                          className="btn btn-primary w-full"
-                          onClick={generateAiReport}
-                          disabled={isGeneratingReport}
-                        >
-                          {isGeneratingReport ? 'AI Đang Phân Tích...' : 'Khởi Chạy Sinh Báo Cáo AI RAG'}
-                        </button>
-                      </div>
-
-                      <div className="ai-output-box">
-                        <h3>Kết Quả Trả Về Từ AI Service</h3>
-                        {aiReportOutput ? (
-                          <div className="ai-typing-output-content">
-                            <pre className="report-render">{aiReportOutput}</pre>
-                            {isGeneratingReport && <span className="typing-cursor">|</span>}
-                          </div>
-                        ) : (
-                          <div className="ai-empty-output">
-                            <Eye size={42} />
-                            <span>Vui lòng nhấn nút Khởi Chạy bên trái để sinh báo cáo hoạt động tức thì.</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            )}
+            {userRole === 'Manager' && <ManagerDashboardPage />}
 
           </div>
         )}

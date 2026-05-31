@@ -19,8 +19,8 @@ public static class MenuItemsEndpoints
             Guid? categoryId,
             bool? isAvailable,
             string? keyword,
-            int page,
-            int pageSize,
+            int? page,
+            int? pageSize,
             GetMenuItemsHandler handler,
             CancellationToken ct) =>
         {
@@ -29,8 +29,8 @@ public static class MenuItemsEndpoints
                 CategoryId = categoryId,
                 IsAvailable = isAvailable,
                 Keyword = keyword,
-                Page = page <= 0 ? 1 : page,
-                PageSize = pageSize <= 0 ? 20 : pageSize,
+                Page = page is null or <= 0 ? 1 : page.Value,
+                PageSize = pageSize is null or <= 0 ? 20 : pageSize.Value,
             };
 
             var result = await handler.HandleAsync(query, ct);

@@ -32,7 +32,7 @@ public class CreateReservationUseCase(IReservationRepository reservationReposito
             CustomerName = request.CustomerName.Trim(),
             Phone = request.Phone.Trim(),
             GuestCount = request.GuestCount,
-            ReservationTime = request.ReservationTime,
+            ReservationTime = request.ReservationTime.ToUniversalTime(),
             Note = request.Note?.Trim(),
             Status = ReservationStatus.Pending.ToString(),
             CreatedAt = DateTimeOffset.UtcNow,

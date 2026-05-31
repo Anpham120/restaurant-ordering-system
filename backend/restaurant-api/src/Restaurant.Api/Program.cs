@@ -6,13 +6,10 @@ using Restaurant.Api.Modules.Identity;
 using Restaurant.Api.Modules.Kitchen;
 using Restaurant.Application.Features.Kitchen;
 using Restaurant.Infrastructure.Features.Kitchen;
-using Restaurant.Api.Modules.Orders;
 using Restaurant.Api.Modules.Ordering;
 using Restaurant.Api.Modules.Reservation;
 using Restaurant.Api.Modules.Restaurant;
-using Restaurant.Api.Services;
 using Restaurant.Application;
-using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure;
 using IRealtimePublisher = Restaurant.Api.Shared.Realtime.IRestaurantRealtimePublisher;
 using RealtimePublisher = Restaurant.Api.Shared.Realtime.SignalRRestaurantRealtimePublisher;
@@ -32,7 +29,6 @@ builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
-builder.Services.AddScoped<IRestaurantHubService, RestaurantHubService>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration
@@ -129,8 +125,5 @@ app.MapBillingEndpoints();
 
 // Kitchen module
 app.MapKitchenEndpoints();
-
-// Order module
-app.MapOrderItemEndpoints();
 
 app.Run();

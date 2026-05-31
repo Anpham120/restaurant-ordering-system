@@ -30,5 +30,28 @@ public static class DatabaseSeeder
             );
             await db.SaveChangesAsync();
         }
+
+        if (!await db.MenuCategories.AnyAsync())
+        {
+            var now = DateTimeOffset.UtcNow;
+
+            var khaiVi = new MenuCategory { Id = Guid.NewGuid(), Name = "Khai vị", Description = "Món khai vị", DisplayOrder = 1, IsActive = true, CreatedAt = now, UpdatedAt = now };
+            var monChinh = new MenuCategory { Id = Guid.NewGuid(), Name = "Món chính", Description = "Món chính", DisplayOrder = 2, IsActive = true, CreatedAt = now, UpdatedAt = now };
+            var doUong = new MenuCategory { Id = Guid.NewGuid(), Name = "Đồ uống", Description = "Thức uống", DisplayOrder = 3, IsActive = true, CreatedAt = now, UpdatedAt = now };
+
+            db.MenuCategories.AddRange(khaiVi, monChinh, doUong);
+
+            db.MenuItems.AddRange(
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = khaiVi.Id, Name = "Gỏi cuốn tôm thịt", Description = "2 cuốn kèm nước chấm", Price = 45000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = khaiVi.Id, Name = "Chả giò chiên giòn", Description = "Khẩu phần 4 cuốn", Price = 50000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = monChinh.Id, Name = "Phở bò tái", Description = "Phở bò truyền thống", Price = 65000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = monChinh.Id, Name = "Cơm gà xối mỡ", Description = "Cơm gà giòn da", Price = 60000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = monChinh.Id, Name = "Bún chả Hà Nội", Description = "Bún chả nướng than hoa", Price = 55000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = doUong.Id, Name = "Trà đào cam sả", Description = "Mát lạnh sảng khoái", Price = 35000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
+                new MenuItem { Id = Guid.NewGuid(), CategoryId = doUong.Id, Name = "Cà phê sữa đá", Description = "Cà phê phin truyền thống", Price = 30000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now }
+            );
+
+            await db.SaveChangesAsync();
+        }
     }
 }

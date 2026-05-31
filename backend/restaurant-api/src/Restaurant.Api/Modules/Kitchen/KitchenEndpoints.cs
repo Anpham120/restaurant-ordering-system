@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.SignalR;
-using Restaurant.Api.Hubs;
 using Restaurant.Api.Modules.Reservation;
+using Restaurant.Api.Shared.Realtime;
 using Restaurant.Application.Features.Kitchen;
 using Restaurant.Infrastructure.Features.Kitchen;
 
@@ -33,7 +32,7 @@ public static class KitchenEndpoints
         Guid id,
         UpdateKitchenOrderItemStatusRequest request,
         UpdateKitchenOrderItemStatusHandler handler,
-        IHubContext<RestaurantHub> hubContext,
+        IRestaurantRealtimePublisher publisher,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -43,19 +42,17 @@ public static class KitchenEndpoints
             return Error(result.StatusCode, result.ErrorCode!, result.ErrorMessage!, httpContext.TraceIdentifier);
         }
 
-        var eventName = result.Event!.Status switch
-        {
-            "Preparing" => "OrderItemPreparing",
-            "Ready" => "OrderItemReady",
-            "Served" => "OrderItemServed",
-            _ => null,
-        };
+        var ev = result.Event!;
+        var payload = new OrderItemStatusRealtimePayload(ev.OrderItemId, ev.OrderId, ev.Status);
 
-        if (eventName is not null)
+        var publish = ev.Status switch
         {
-            await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
-                .SendAsync(eventName, result.Event, cancellationToken);
-        }
+            "Preparing" => publisher.PublishOrderItemPreparingAsync(payload, result.SessionToken, cancellationToken),
+            "Ready" => publisher.PublishOrderItemReadyAsync(payload, result.SessionToken, cancellationToken),
+            "Served" => publisher.PublishOrderItemServedAsync(payload, result.SessionToken, cancellationToken),
+            _ => Task.CompletedTask,
+        };
+        await publish;
 
         return TypedResults.Ok(new ApiResponse<KitchenOrderItemResponse>(true, result.Response!));
     }

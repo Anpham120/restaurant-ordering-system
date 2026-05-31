@@ -14,7 +14,9 @@ public sealed record OrderResponse(
     Guid Id,
     string OrderCode,
     Guid TableSessionId,
+    string TableNumber,
     string Status,
+    DateTimeOffset CreatedAt,
     IReadOnlyCollection<OrderItemResponse> Items);
 
 public sealed record OrderItemResponse(

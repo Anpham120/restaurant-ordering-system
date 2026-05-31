@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Restaurant.Api.Hubs;
 using Restaurant.Api.Modules.Billing;
 using Restaurant.Api.Modules.Identity;
 using Restaurant.Api.Modules.Kitchen;
@@ -17,6 +16,7 @@ using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure;
 using IRealtimePublisher = Restaurant.Api.Shared.Realtime.IRestaurantRealtimePublisher;
 using RealtimePublisher = Restaurant.Api.Shared.Realtime.SignalRRestaurantRealtimePublisher;
+using RestaurantHub = Restaurant.Api.Shared.Realtime.RestaurantHub;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,7 +104,8 @@ app.UseAuthorization();
 // ── Health check ──────────────────────────────────────────────────────────────
 app.MapHealthChecks("/health");
 app.MapHub<RestaurantHub>("/hubs/restaurant")
-   .RequireCors("AdminWebPolicy");
+   .RequireCors("AdminWebPolicy")
+   .AllowAnonymous();
 
 // ── REST Endpoints ────────────────────────────────────────────────────────────
 // Identity module

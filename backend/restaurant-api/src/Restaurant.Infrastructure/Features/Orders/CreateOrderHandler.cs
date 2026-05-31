@@ -28,7 +28,7 @@ public sealed class CreateOrderHandler(RestaurantDbContext dbContext, TimeProvid
         if (existingOrder is not null)
         {
             return IsSamePayload(existingOrder, request.Items)
-                ? CreateOrderResult.Success(ToResponse(existingOrder), ToEvent(existingOrder, session.Table.TableNumber))
+                ? CreateOrderResult.Success(ToResponse(existingOrder, session.Table.TableNumber), ToEvent(existingOrder, session.Table.TableNumber))
                 : CreateOrderResult.Fail("IDEMPOTENCY_CONFLICT", "Idempotency key đã được dùng cho payload khác.", 409);
         }
 
@@ -78,7 +78,7 @@ public sealed class CreateOrderHandler(RestaurantDbContext dbContext, TimeProvid
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return CreateOrderResult.Success(ToResponse(order), ToEvent(order, session.Table.TableNumber), 201);
+        return CreateOrderResult.Success(ToResponse(order, session.Table.TableNumber), ToEvent(order, session.Table.TableNumber), 201);
     }
 
     private static bool IsSamePayload(Order order, IReadOnlyCollection<CreateOrderItemRequest> requestItems)
@@ -102,12 +102,14 @@ public sealed class CreateOrderHandler(RestaurantDbContext dbContext, TimeProvid
 
     private static string NormalizeNote(string? note) => string.IsNullOrWhiteSpace(note) ? string.Empty : note.Trim();
 
-    private static OrderResponse ToResponse(Order order) =>
+    private static OrderResponse ToResponse(Order order, string tableNumber) =>
         new(
             order.Id,
             order.OrderCode,
             order.TableSessionId,
+            tableNumber,
             order.Status,
+            order.CreatedAt,
             order.OrderItems
                 .OrderBy(i => i.CreatedAt)
                 .Select(i => new OrderItemResponse(i.Id, i.MenuItemId, i.MenuItemName, i.UnitPrice, i.Quantity, i.Note, i.Status))

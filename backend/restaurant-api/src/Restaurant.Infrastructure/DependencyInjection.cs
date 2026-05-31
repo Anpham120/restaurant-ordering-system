@@ -58,6 +58,7 @@ public static class DependencyInjection
 
         // Ordering + Kitchen handlers
         services.AddScoped<CreateOrderHandler>();
+        services.AddScoped<GetOrderByIdHandler>();
         services.AddScoped<GetKitchenOrderItemsHandler>();
         services.AddScoped<UpdateKitchenOrderItemStatusHandler>();
 

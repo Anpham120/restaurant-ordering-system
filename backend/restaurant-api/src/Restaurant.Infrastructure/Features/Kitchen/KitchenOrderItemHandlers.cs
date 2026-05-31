@@ -120,7 +120,7 @@ public sealed class UpdateKitchenOrderItemStatusHandler(RestaurantDbContext dbCo
 
         var @event = new OrderItemStatusChangedEvent(item.Id, item.OrderId, item.Status);
 
-        return UpdateKitchenOrderItemStatusResult.Success(response, @event);
+        return UpdateKitchenOrderItemStatusResult.Success(response, @event, item.Order.TableSession.SessionToken);
     }
 
     private static bool CanMove(OrderItemStatus currentStatus, OrderItemStatus nextStatus) =>
@@ -134,18 +134,20 @@ public sealed record UpdateKitchenOrderItemStatusResult(
     bool IsSuccess,
     KitchenOrderItemResponse? Response,
     OrderItemStatusChangedEvent? Event,
+    string? SessionToken,
     int StatusCode,
     string? ErrorCode,
     string? ErrorMessage)
 {
     public static UpdateKitchenOrderItemStatusResult Success(
         KitchenOrderItemResponse response,
-        OrderItemStatusChangedEvent @event) =>
-        new(true, response, @event, 200, null, null);
+        OrderItemStatusChangedEvent @event,
+        string sessionToken) =>
+        new(true, response, @event, sessionToken, 200, null, null);
 
     public static UpdateKitchenOrderItemStatusResult Fail(
         string code,
         string message,
         int statusCode = 404) =>
-        new(false, null, null, statusCode, code, message);
+        new(false, null, null, null, statusCode, code, message);
 }

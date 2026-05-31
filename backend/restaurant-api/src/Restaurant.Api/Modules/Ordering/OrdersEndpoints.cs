@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.SignalR;
-using Restaurant.Api.Hubs;
 using Restaurant.Api.Modules.Reservation;
+using Restaurant.Api.Shared.Realtime;
 using Restaurant.Application.Features.Orders;
 using Restaurant.Infrastructure.Features.Orders;
 
@@ -17,13 +16,17 @@ public static class OrdersEndpoints
             .WithName("CreateOrder")
             .AllowAnonymous();
 
+        group.MapGet("/{id:guid}", GetOrderByIdAsync)
+            .WithName("GetOrderById")
+            .AllowAnonymous();
+
         return endpoints;
     }
 
     private static async Task<IResult> CreateOrderAsync(
         CreateOrderRequest request,
         CreateOrderHandler handler,
-        IHubContext<RestaurantHub> hubContext,
+        IRestaurantRealtimePublisher publisher,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -43,12 +46,43 @@ public static class OrdersEndpoints
         if (!result.IsSuccess)
             return Error(result.StatusCode, result.ErrorCode!, result.ErrorMessage!, httpContext.TraceIdentifier);
 
-        await hubContext.Clients.Group(RestaurantHub.KitchenDisplayGroup)
-            .SendAsync("NewOrderCreated", result.Event, cancellationToken);
+        var ev = result.Event!;
+        await publisher.PublishNewOrderCreatedAsync(
+            new NewOrderCreatedRealtimePayload(ev.OrderId, ev.OrderCode, ev.TableSessionId, ev.TableNumber, ev.CreatedAt),
+            cancellationToken: cancellationToken);
 
         return result.StatusCode == StatusCodes.Status201Created
             ? TypedResults.Created($"/api/v1/orders/{result.Response!.Id}", new ApiResponse<OrderResponse>(true, result.Response))
             : TypedResults.Ok(new ApiResponse<OrderResponse>(true, result.Response!));
+    }
+
+    private static async Task<IResult> GetOrderByIdAsync(
+        Guid id,
+        string? sessionToken,
+        GetOrderByIdHandler handler,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return Error(
+                StatusCodes.Status400BadRequest,
+                "VALIDATION_ERROR",
+                "sessionToken là bắt buộc.",
+                httpContext.TraceIdentifier);
+        }
+
+        var order = await handler.HandleAsync(id, sessionToken, cancellationToken);
+        if (order is null)
+        {
+            return Error(
+                StatusCodes.Status404NotFound,
+                "NOT_FOUND",
+                "Không tìm thấy đơn hàng.",
+                httpContext.TraceIdentifier);
+        }
+
+        return TypedResults.Ok(new ApiResponse<OrderResponse>(true, order));
     }
 
     private static IResult Error(int statusCode, string code, string message, string traceId) =>

@@ -10,6 +10,7 @@ import { ReservationPage } from './features/reservation/ReservationPage';
 import { OrderTrackerPage } from './features/order/OrderTrackerPage';
 import type { CartItem } from './types/menu';
 import type { Order } from './types/orderTracking';
+import { orderService } from './services/orderService';
 import './App.css';
 
 // Minimal lookup for AI combo suggestions
@@ -74,6 +75,8 @@ export function App() {
     const saved = sessionStorage.getItem('tableSession');
     return saved ? JSON.parse(saved) : null;
   });
+  // True only when the session was verified against the backend → enables real order creation.
+  const [isRealSession, setIsRealSession] = useState(() => sessionStorage.getItem('isRealSession') === 'true');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -81,21 +84,35 @@ export function App() {
     if (token) handleLoadTableSession(token);
   }, []);
 
-  const handleLoadTableSession = (token: string) => {
-    const mockSession: TableSession = {
-      id: 'sess_' + Math.random().toString(36).substr(2, 9),
-      tableId: 'tbl-a01',
-      tableNumber: 'A01',
-      status: 'Active',
-      openedAt: new Date().toISOString(),
-    };
+  const handleLoadTableSession = async (token: string) => {
     sessionStorage.setItem('sessionToken', token);
-    sessionStorage.setItem('tableSession', JSON.stringify(mockSession));
     setSessionToken(token);
-    setTableSession(mockSession);
-    setActiveTab('menu');
-    triggerToast('📍 Đã kích hoạt session gọi món tại Bàn A01!');
-    window.history.replaceState({}, '', window.location.pathname + `?sessionToken=${token}`);
+
+    const applySession = (session: TableSession, real: boolean) => {
+      sessionStorage.setItem('tableSession', JSON.stringify(session));
+      sessionStorage.setItem('isRealSession', String(real));
+      setTableSession(session);
+      setIsRealSession(real);
+      setActiveTab('menu');
+      window.history.replaceState({}, '', window.location.pathname + `?sessionToken=${token}`);
+    };
+
+    // Verify the token against the backend; fall back to a demo session if unavailable.
+    const res = await orderService.getSessionByToken(token);
+    if (res.success && res.data) {
+      const s = res.data;
+      applySession({ id: s.id, tableId: s.tableId, tableNumber: s.tableNumber, status: s.status, openedAt: s.openedAt }, true);
+      triggerToast(`📍 Đã kích hoạt session gọi món tại Bàn ${s.tableNumber}!`);
+    } else {
+      applySession({
+        id: 'sess_' + Math.random().toString(36).substr(2, 9),
+        tableId: 'tbl-a01',
+        tableNumber: 'A01',
+        status: 'Active',
+        openedAt: new Date().toISOString(),
+      }, false);
+      triggerToast('📍 Đã kích hoạt session gọi món tại Bàn A01 (demo)!');
+    }
   };
 
   const handleSimulateQRScan = () => {
@@ -105,8 +122,10 @@ export function App() {
   const handleClearSession = () => {
     sessionStorage.removeItem('sessionToken');
     sessionStorage.removeItem('tableSession');
+    sessionStorage.removeItem('isRealSession');
     setSessionToken(null);
     setTableSession(null);
+    setIsRealSession(false);
     setCart([]);
     window.history.replaceState({}, '', window.location.pathname);
     triggerToast('Đã đóng phiên gọi món tại bàn.');
@@ -165,10 +184,44 @@ export function App() {
   const addOrderToTrackerRef = useRef<((order: Order) => void) | null>(null);
   const pendingOrderRef = useRef<Order | null>(null);
 
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     if (cart.length === 0) return;
     setIsSubmittingOrder(true);
 
+    // Real backend order when the session is verified — status then flows via SignalR/polling.
+    if (isRealSession && sessionToken) {
+      const res = await orderService.createOrder(sessionToken, cart);
+      setIsSubmittingOrder(false);
+      if (res.success && res.data) {
+        const d = res.data;
+        const newOrder: Order = {
+          orderId: d.id,
+          orderCode: d.orderCode,
+          tableNumber: tableSession?.tableNumber || 'A02',
+          status: 'Pending',
+          items: d.items.map(it => ({
+            id: it.id,
+            menuItemName: it.menuItemName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            status: it.status as Order['items'][number]['status'],
+            note: it.note,
+          })),
+          placedAt: new Date(),
+        };
+        if (addOrderToTrackerRef.current) addOrderToTrackerRef.current(newOrder);
+        else pendingOrderRef.current = newOrder;
+        setCart([]);
+        setIsCartOpen(false);
+        setActiveTab('tracker');
+        triggerToast('🚀 Gửi order thành công! Đang chờ bếp phản hồi...');
+      } else {
+        triggerToast(`❌ ${res.error?.message || 'Gửi order thất bại. Vui lòng thử lại.'}`);
+      }
+      return;
+    }
+
+    // Demo simulation (no verified backend session)
     setTimeout(() => {
       const orderCode = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
       const newOrder: Order = {

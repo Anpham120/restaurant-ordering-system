@@ -172,6 +172,8 @@ export function useOrderTracking(
         if (isCancelled) return;
         setRealtimeStatus('connected');
         setRealtimeMessage('SignalR da ket noi lai.');
+        // Group membership is lost on reconnect — re-join the customer session group.
+        void connection?.invoke('SubscribeToOrderStatus', sessionToken).catch(() => {});
       });
 
       connection.onclose(() => {
@@ -183,6 +185,10 @@ export function useOrderTracking(
       try {
         await connection.start();
         if (isCancelled) return;
+        // Join the customer session group so kitchen status events reach this client.
+        try {
+          await connection.invoke('SubscribeToOrderStatus', sessionToken);
+        } catch { /* best-effort; events still arrive via Order group if subscribed elsewhere */ }
         setRealtimeStatus('connected');
         setRealtimeMessage('SignalR dang theo doi trang thai mon theo thoi gian thuc.');
       } catch {

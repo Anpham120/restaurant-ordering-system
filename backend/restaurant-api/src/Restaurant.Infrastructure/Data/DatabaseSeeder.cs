@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Restaurant.Application.Features.Identity;
 using Restaurant.Domain.Entities;
+using Restaurant.Domain.Enums;
 
 namespace Restaurant.Infrastructure.Data;
 
@@ -50,6 +51,31 @@ public static class DatabaseSeeder
                 new MenuItem { Id = Guid.NewGuid(), CategoryId = doUong.Id, Name = "Trà đào cam sả", Description = "Mát lạnh sảng khoái", Price = 35000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now },
                 new MenuItem { Id = Guid.NewGuid(), CategoryId = doUong.Id, Name = "Cà phê sữa đá", Description = "Cà phê phin truyền thống", Price = 30000m, IsAvailable = true, CreatedAt = now, UpdatedAt = now }
             );
+
+            await db.SaveChangesAsync();
+        }
+
+        if (!await db.Tables.AnyAsync())
+        {
+            var now = DateTimeOffset.UtcNow;
+            var staffId = (await db.Users.FirstAsync(u => u.Role == "Staff")).Id;
+
+            var indoor = new Area { Id = Guid.NewGuid(), Name = "Khu trong nhà", Description = "Khu vực trong nhà", CreatedAt = now };
+            db.Areas.Add(indoor);
+
+            var tableA01 = new Table { Id = Guid.NewGuid(), AreaId = indoor.Id, TableNumber = "A01", Capacity = 4, Status = TableStatus.Occupied.ToString(), CreatedAt = now, UpdatedAt = now };
+            var tableA02 = new Table { Id = Guid.NewGuid(), AreaId = indoor.Id, TableNumber = "A02", Capacity = 2, Status = TableStatus.Available.ToString(), CreatedAt = now, UpdatedAt = now };
+            db.Tables.AddRange(tableA01, tableA02);
+
+            db.TableSessions.Add(new TableSession
+            {
+                Id = Guid.NewGuid(),
+                TableId = tableA01.Id,
+                SessionToken = "dev-session-token-a01",
+                Status = TableSessionStatus.Active.ToString(),
+                OpenedAt = now,
+                CreatedBy = staffId
+            });
 
             await db.SaveChangesAsync();
         }

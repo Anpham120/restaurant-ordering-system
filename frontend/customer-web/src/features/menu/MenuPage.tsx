@@ -79,7 +79,7 @@ export function MenuPage({ cart, onAddToCart, onUpdateQty, triggerToast }: Props
       ) : (
         <div className="menu-grid">
           {filtered.map(item => {
-            const qty = cartQty(item.menuItemId ?? item.id);
+            const qty = cartQty(item.id);
             return (
               <div key={item.id} className="dish-card">
                 {item.imageUrl && (

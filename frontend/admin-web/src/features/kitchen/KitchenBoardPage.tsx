@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { kitchenService } from '../../services/kitchenService';
 import type { KitchenOrderItem, OrderItemStatus } from '../../types';
 import { env } from '../../config/env';
+import { RefreshCw, Clock, StickyNote } from 'lucide-react';
 
 const NEXT_STATUS: Partial<Record<OrderItemStatus, OrderItemStatus>> = {
   Pending: 'Preparing',
@@ -74,7 +75,7 @@ export function KitchenBoardPage() {
           <p>Cập nhật tiến độ nấu ăn theo thời gian thực.</p>
         </div>
         <div className="panel-actions-group">
-          <button className="btn btn-tertiary" onClick={load}>🔄 Làm Mới</button>
+          <button className="btn btn-tertiary" onClick={load}><RefreshCw size={14} /> Làm Mới</button>
         </div>
       </div>
 
@@ -95,12 +96,12 @@ export function KitchenBoardPage() {
                       <div className="item-card-top">
                         <span className="item-table-no">Bàn: {item.tableNumber}</span>
                         <span className="item-time-waiting">
-                          🕐 {minutesSince(item.createdAt)} phút
+                          <Clock size={13} /> {minutesSince(item.createdAt)} phút
                         </span>
                       </div>
                       <h4 className="item-dish-name">{item.menuItemName}</h4>
                       <div className="item-quantity-box">Số lượng: <strong>x{item.quantity}</strong></div>
-                      {item.note && <div className="item-note-box">📝 {item.note}</div>}
+                      {item.note && <div className="item-note-box"><StickyNote size={13} /> {item.note}</div>}
                       {status !== 'Served' && (
                         <button
                           className={`${btnClass} btn-advance w-full mt-10`}

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Utensils, Calendar, ShoppingBag, Search, Plus, Minus, X, Clock,
+  Utensils, UtensilsCrossed, Calendar, ShoppingBag, Search, Plus, Minus, X, Clock,
   RefreshCw, Sparkles, Sun, Moon, Home, Bot, Heart, Star,
-  Tag, Newspaper, Bell, ScanLine
+  Tag, Newspaper, Bell, ScanLine, ChevronLeft, ChevronRight, User, Smartphone, Lightbulb
 } from 'lucide-react';
 import { HomePage } from './features/home/HomePage';
 import { MenuPage } from './features/menu/MenuPage';
@@ -158,9 +158,9 @@ export function App() {
         setCart([]);
         setIsCartOpen(false);
         setActiveTab('tracker');
-        triggerToast('🚀 Gửi order thành công! Đang chờ bếp phản hồi...');
+        triggerToast('Gửi order thành công! Đang chờ bếp phản hồi...');
       } else {
-        triggerToast(`❌ ${res.error?.message || 'Gửi order thất bại. Vui lòng thử lại.'}`);
+        triggerToast(`${res.error?.message || 'Gửi order thất bại. Vui lòng thử lại.'}`);
       }
       return;
     }
@@ -203,7 +203,7 @@ export function App() {
       setIsCartOpen(false);
       setIsSubmittingOrder(false);
       setActiveTab('tracker');
-      triggerToast('🚀 Gửi order thành công! Đang chờ bếp phản hồi...');
+      triggerToast('Gửi order thành công! Đang chờ bếp phản hồi...');
     }, 1500);
   };
 
@@ -289,14 +289,14 @@ export function App() {
           display: 'flex', alignItems: 'center', gap: '8px',
           backdropFilter: 'blur(8px)', animation: 'fadeIn 0.3s forwards',
         }}>
-          <span>🔔</span> {toastMessage}
+          <Bell size={16} /> {toastMessage}
         </div>
       )}
 
       {/* Left Sidebar */}
       <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <button type="button" className="sidebar-collapse-toggle" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
-          {isSidebarCollapsed ? '›' : '‹'}
+          {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
         <div className="sidebar-scroll-wrapper">
           <div>
@@ -342,12 +342,12 @@ export function App() {
 
           <div className="sidebar-footer">
             <div className="sidebar-profile" onClick={() => triggerToast('Khách hàng Hoàng Minh - Hạng Vàng')}>
-              <div className="sidebar-avatar">👨‍🚀</div>
+              <div className="sidebar-avatar"><User size={18} /></div>
               <div className="sidebar-profile-info">
                 <div className="sidebar-profile-name">Hoàng Minh</div>
                 <div className="sidebar-profile-points">120 điểm</div>
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>➔</div>
+              <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
             </div>
             <div className="sidebar-theme-row">
               <span className="sidebar-theme-label">Chế độ tối</span>
@@ -413,7 +413,7 @@ export function App() {
               <span style={{ color: 'var(--primary)' }}><ScanLine size={16} /></span>
               <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Quét QR để nhận menu trực tiếp tại bàn</span>
             </div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>➔</span>
+            <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
         )}
 
@@ -421,7 +421,7 @@ export function App() {
         {sessionToken && (
           <div className="simulation-panel" style={{ marginBottom: '24px' }}>
             <div className="simulation-info">
-              <div className="simulation-icon">📱</div>
+              <div className="simulation-icon"><Smartphone size={18} /></div>
               <div>
                 <div className="simulation-title">Đang quét bàn {tableSession?.tableNumber}</div>
                 <div className="simulation-desc">Session token: {sessionToken.substring(0, 20)}...</div>
@@ -462,7 +462,7 @@ export function App() {
           {activeTab === 'ai' && (
             <div className="animate-fade-in ai-container">
               <div className="ai-header-info">
-                <div className="ai-avatar">🤖</div>
+                <div className="ai-avatar"><Bot size={20} /></div>
                 <div>
                   <h3 className="ai-title-text">Trợ Lý Khẩu Vị AI - TV FOOD</h3>
                   <div className="ai-status-pulse">
@@ -543,19 +543,19 @@ export function App() {
       {/* Mobile Bottom Nav */}
       <nav className="tab-navigation">
         <button className={`tab-nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')} id="nav-btn-home">
-          <span className="tab-nav-btn-icon">🏠</span><span>Trang Chủ</span>
+          <span className="tab-nav-btn-icon"><Home size={20} /></span><span>Trang Chủ</span>
         </button>
         <button className={`tab-nav-btn ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => setActiveTab('menu')} id="nav-btn-menu">
-          <span className="tab-nav-btn-icon">🍲</span><span>Thực Đơn</span>
+          <span className="tab-nav-btn-icon"><Utensils size={20} /></span><span>Thực Đơn</span>
         </button>
         <button className={`tab-nav-btn ${activeTab === 'reservation' ? 'active' : ''}`} onClick={() => setActiveTab('reservation')} id="nav-btn-reservation">
-          <span className="tab-nav-btn-icon">📅</span><span>Đặt Bàn</span>
+          <span className="tab-nav-btn-icon"><Calendar size={20} /></span><span>Đặt Bàn</span>
         </button>
         <button className={`tab-nav-btn ${activeTab === 'tracker' ? 'active' : ''}`} onClick={() => setActiveTab('tracker')} id="nav-btn-tracker">
-          <span className="tab-nav-btn-icon">⏳</span><span>Đơn Hàng</span>
+          <span className="tab-nav-btn-icon"><Clock size={20} /></span><span>Đơn Hàng</span>
         </button>
         <button className={`tab-nav-btn ${activeTab === 'ai' ? 'active' : ''}`} onClick={() => setActiveTab('ai')} id="nav-btn-ai">
-          <span className="tab-nav-btn-icon">🤖</span><span>Trợ Lý AI</span>
+          <span className="tab-nav-btn-icon"><Bot size={20} /></span><span>Trợ Lý AI</span>
         </button>
       </nav>
 
@@ -592,11 +592,11 @@ export function App() {
               ) : (
                 cart.map((item, idx) => (
                   <div key={idx} className="cart-item">
-                    <div className="cart-item-img-placeholder">🍽️</div>
+                    <div className="cart-item-img-placeholder"><UtensilsCrossed size={20} /></div>
                     <div className="cart-item-details">
                       <div>
                         <h4 className="cart-item-name">{item.name}</h4>
-                        {item.note && <p className="cart-item-note">💡 {item.note}</p>}
+                        {item.note && <p className="cart-item-note"><Lightbulb size={12} /> {item.note}</p>}
                       </div>
                       <div className="cart-item-row">
                         <span className="cart-item-price">{(item.price * item.quantity).toLocaleString('vi-VN')} ₫</span>

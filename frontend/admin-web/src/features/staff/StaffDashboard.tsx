@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Map, CalendarSearch } from 'lucide-react';
 import { RoleGate } from '../../auth/RoleGate';
 import { ReservationsPage } from './ReservationsPage';
 import { TableMapPage } from './TableMapPage';
@@ -16,13 +17,13 @@ export function StaffDashboard() {
             className={`staff-nav-tab ${activeTab === 'map' ? 'active' : ''}`}
             onClick={() => setActiveTab('map')}
           >
-            🗺️ Sơ Đồ Bàn Phục Vụ
+            <Map size={16} /> Sơ Đồ Bàn Phục Vụ
           </button>
           <button
             className={`staff-nav-tab ${activeTab === 'reservations' ? 'active' : ''}`}
             onClick={() => setActiveTab('reservations')}
           >
-            📅 Tìm Kiếm & Check-in Đặt Chỗ
+            <CalendarSearch size={16} /> Tìm Kiếm & Check-in Đặt Chỗ
           </button>
         </div>
 

@@ -449,6 +449,7 @@ export function App() {
               sessionToken={sessionToken}
               tableNumber={tableSession?.tableNumber || ''}
               triggerToast={triggerToast}
+              isRealSession={isRealSession}
               onTrackingReady={(addOrder) => {
                 addOrderToTrackerRef.current = addOrder;
                 if (pendingOrderRef.current) {

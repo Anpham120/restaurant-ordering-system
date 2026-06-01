@@ -6,6 +6,7 @@ interface Props {
   sessionToken: string | null;
   tableNumber: string;
   triggerToast: (msg: string) => void;
+  isRealSession: boolean;
   onTrackingReady: (addOrder: (order: Order) => void) => void;
 }
 
@@ -17,9 +18,9 @@ const STATUS_LABEL: Record<string, string> = {
   Cancelled: 'Đã huỷ',
 };
 
-export function OrderTrackerPage({ sessionToken, tableNumber, triggerToast, onTrackingReady }: Props) {
+export function OrderTrackerPage({ sessionToken, tableNumber, triggerToast, isRealSession, onTrackingReady }: Props) {
   const { placedOrders, realtimeStatus, realtimeMessage, lastRealtimeAt, addPlacedOrder } =
-    useOrderTracking(sessionToken, tableNumber, triggerToast);
+    useOrderTracking(sessionToken, tableNumber, triggerToast, isRealSession);
 
   // Expose addPlacedOrder to parent (for cart submission)
   // Use a ref to avoid re-render loops

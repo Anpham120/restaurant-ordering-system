@@ -14,22 +14,23 @@ import type {
   ApiOrder
 } from '../types/orderTracking';
 import { deriveOrderStatus, mapApiOrder } from '../utils/orderTracking';
+import { env } from '../config/env';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const RESTAURANT_HUB_PATH = '/hubs/restaurant';
 
 export function useOrderTracking(
   sessionToken: string | null,
   fallbackTableNumber: string,
-  triggerToast: (msg: string) => void
+  triggerToast: (msg: string) => void,
+  isRealSession: boolean
 ) {
   const [placedOrders, setPlacedOrders] = useState<Order[]>([]);
-  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>(API_BASE_URL ? 'connecting' : 'demo');
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>(isRealSession ? 'connecting' : 'demo');
   const [lastRealtimeAt, setLastRealtimeAt] = useState<Date | null>(null);
   const [realtimeMessage, setRealtimeMessage] = useState(
-    API_BASE_URL
+    isRealSession
       ? 'Dang chuan bi ket noi realtime.'
-      : 'Che do demo: chua cau hinh VITE_API_BASE_URL nen trang thai se tu mo phong.'
+      : 'Che do demo: phien chua xac thuc voi backend nen trang thai se tu mo phong.'
   );
 
   const placedOrdersRef = useRef<Order[]>([]);
@@ -79,9 +80,9 @@ export function useOrderTracking(
 
   // 2. Stable reference for fetching snapshots
   const fetchOrderSnapshot = useCallback(async (orderId: string) => {
-    if (!API_BASE_URL || !sessionToken) return null;
+    if (!isRealSession || !sessionToken) return null;
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}?sessionToken=${encodeURIComponent(sessionToken)}`);
+    const response = await fetch(`${env.apiBaseUrl}/api/v1/orders/${orderId}?sessionToken=${encodeURIComponent(sessionToken)}`);
     const payload = await response.json() as ApiResponse<ApiOrder>;
 
     if (!response.ok || !payload.success) {
@@ -89,11 +90,11 @@ export function useOrderTracking(
     }
 
     return mapApiOrder(payload.data, fallbackTableNumber);
-  }, [sessionToken, fallbackTableNumber]);
+  }, [sessionToken, fallbackTableNumber, isRealSession]);
 
-  // 3. Demo status updater (runs when no VITE_API_BASE_URL is set)
+  // 3. Demo status updater (runs when the session is not backend-verified)
   useEffect(() => {
-    if (API_BASE_URL || placedOrders.length === 0) return;
+    if (isRealSession || placedOrders.length === 0) return;
 
     const interval = setInterval(() => {
       setPlacedOrders(prevOrders => {
@@ -137,11 +138,11 @@ export function useOrderTracking(
     }, 12000);
 
     return () => clearInterval(interval);
-  }, [placedOrders.length]);
+  }, [placedOrders.length, isRealSession]);
 
   // 4. SignalR connection manager - ONLY depend on stable variables and sessionToken
   useEffect(() => {
-    if (!API_BASE_URL || !sessionToken) return;
+    if (!isRealSession || !sessionToken) return;
 
     let connection: HubConnection | null = null;
     let isCancelled = false;
@@ -151,7 +152,7 @@ export function useOrderTracking(
       setRealtimeMessage('Dang ket noi SignalR...');
 
       connection = new HubConnectionBuilder()
-        .withUrl(`${API_BASE_URL}${RESTAURANT_HUB_PATH}?sessionToken=${encodeURIComponent(sessionToken)}`, {
+        .withUrl(`${env.apiBaseUrl}${RESTAURANT_HUB_PATH}?sessionToken=${encodeURIComponent(sessionToken)}`, {
           accessTokenFactory: () => sessionToken
         })
         .withAutomaticReconnect()
@@ -206,11 +207,11 @@ export function useOrderTracking(
         void connection.stop();
       }
     };
-  }, [applyOrderItemStatusEvent, sessionToken]);
+  }, [applyOrderItemStatusEvent, sessionToken, isRealSession]);
 
   // 5. Fallback polling manager
   useEffect(() => {
-    if (!API_BASE_URL || !sessionToken || realtimeStatus === 'connected') return;
+    if (!isRealSession || !sessionToken || realtimeStatus === 'connected') return;
 
     const interval = setInterval(async () => {
       const ordersToPoll = placedOrdersRef.current;
@@ -231,7 +232,7 @@ export function useOrderTracking(
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [fetchOrderSnapshot, realtimeStatus, sessionToken]);
+  }, [fetchOrderSnapshot, realtimeStatus, sessionToken, isRealSession]);
 
   return {
     placedOrders,

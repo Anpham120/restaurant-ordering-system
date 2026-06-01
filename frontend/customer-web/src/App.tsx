@@ -11,6 +11,7 @@ import { OrderTrackerPage } from './features/order/OrderTrackerPage';
 import type { CartItem } from './types/menu';
 import type { Order } from './types/orderTracking';
 import { orderService } from './services/orderService';
+import { useTableSession } from './hooks/useTableSession';
 import './App.css';
 
 // Minimal lookup for AI combo suggestions
@@ -30,14 +31,6 @@ interface ChatMessage {
     label: string;
     items: { id: string; quantity: number; note: string }[];
   };
-}
-
-interface TableSession {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  status: string;
-  openedAt: string;
 }
 
 export function App() {
@@ -66,70 +59,6 @@ export function App() {
   }, []);
 
   useEffect(() => { sessionStorage.setItem('activeTab', activeTab); }, [activeTab]);
-
-  // QR session
-  const [sessionToken, setSessionToken] = useState<string | null>(() =>
-    sessionStorage.getItem('sessionToken')
-  );
-  const [tableSession, setTableSession] = useState<TableSession | null>(() => {
-    const saved = sessionStorage.getItem('tableSession');
-    return saved ? JSON.parse(saved) : null;
-  });
-  // True only when the session was verified against the backend → enables real order creation.
-  const [isRealSession, setIsRealSession] = useState(() => sessionStorage.getItem('isRealSession') === 'true');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('sessionToken');
-    if (token) handleLoadTableSession(token);
-  }, []);
-
-  const handleLoadTableSession = async (token: string) => {
-    sessionStorage.setItem('sessionToken', token);
-    setSessionToken(token);
-
-    const applySession = (session: TableSession, real: boolean) => {
-      sessionStorage.setItem('tableSession', JSON.stringify(session));
-      sessionStorage.setItem('isRealSession', String(real));
-      setTableSession(session);
-      setIsRealSession(real);
-      setActiveTab('menu');
-      window.history.replaceState({}, '', window.location.pathname + `?sessionToken=${token}`);
-    };
-
-    // Verify the token against the backend; fall back to a demo session if unavailable.
-    const res = await orderService.getSessionByToken(token);
-    if (res.success && res.data) {
-      const s = res.data;
-      applySession({ id: s.id, tableId: s.tableId, tableNumber: s.tableNumber, status: s.status, openedAt: s.openedAt }, true);
-      triggerToast(`📍 Đã kích hoạt session gọi món tại Bàn ${s.tableNumber}!`);
-    } else {
-      applySession({
-        id: 'sess_' + Math.random().toString(36).substr(2, 9),
-        tableId: 'tbl-a01',
-        tableNumber: 'A01',
-        status: 'Active',
-        openedAt: new Date().toISOString(),
-      }, false);
-      triggerToast('📍 Đã kích hoạt session gọi món tại Bàn A01 (demo)!');
-    }
-  };
-
-  const handleSimulateQRScan = () => {
-    handleLoadTableSession('secure-qr-session-token-' + Math.floor(1000 + Math.random() * 9000));
-  };
-
-  const handleClearSession = () => {
-    sessionStorage.removeItem('sessionToken');
-    sessionStorage.removeItem('tableSession');
-    sessionStorage.removeItem('isRealSession');
-    setSessionToken(null);
-    setTableSession(null);
-    setIsRealSession(false);
-    setCart([]);
-    window.history.replaceState({}, '', window.location.pathname);
-    triggerToast('Đã đóng phiên gọi món tại bàn.');
-  };
 
   // Cart
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -178,6 +107,21 @@ export function App() {
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // QR table session — load/verify token, simulate scan, clear. Switches to menu tab on load.
+  const {
+    sessionToken,
+    tableSession,
+    isRealSession,
+    simulateQRScan: handleSimulateQRScan,
+    clearSession,
+  } = useTableSession(triggerToast, () => setActiveTab('menu'));
+
+  // Clearing the table session also empties the cart (cart is table-scoped).
+  const handleClearSession = () => {
+    clearSession();
+    setCart([]);
   };
 
   // Tracker ref — expose addPlacedOrder from OrderTrackerPage to handleSubmitOrder

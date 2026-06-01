@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Search, X, Phone, Calendar, Users, Ticket, StickyNote, Check } from 'lucide-react';
 import { reservationService } from '../../services/reservationService';
 import { tableService } from '../../services/tableService';
 import type { Reservation, Table } from '../../types';
@@ -84,7 +85,7 @@ export function ReservationsPage() {
     <div className="staff-reservations-container animate-fade-in" style={{ width: '100%' }}>
       {actionMsg && (
         <div className="action-message" onClick={() => setActionMsg(null)}>
-          {actionMsg} <span style={{ cursor: 'pointer', marginLeft: 8 }}>✕</span>
+          {actionMsg} <span style={{ cursor: 'pointer', marginLeft: 8 }}><X size={14} /></span>
         </div>
       )}
 
@@ -95,11 +96,13 @@ export function ReservationsPage() {
         </div>
 
         <div className="res-search-controls-row">
-          <div className="search-input-wrap">
+          <div className="search-input-wrap" style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
               className="form-input"
-              placeholder="🔍 Tìm theo tên, SĐT hoặc mã đặt bàn..."
+              style={{ paddingLeft: 38 }}
+              placeholder="Tìm theo tên, SĐT hoặc mã đặt bàn..."
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
             />
@@ -131,7 +134,7 @@ export function ReservationsPage() {
               <div className="res-card-header">
                 <div className="res-card-name-phone">
                   <h4>{res.customerName}</h4>
-                  <span>📞 {res.phone}</span>
+                  <span><Phone size={13} /> {res.phone}</span>
                 </div>
                 <span className={`res-badge badge-${res.status.toLowerCase()}`}>
                   {STATUS_LABEL[res.status] ?? res.status}
@@ -140,10 +143,10 @@ export function ReservationsPage() {
 
               <div className="res-card-body">
                 <div className="res-meta-grid">
-                  <span>📅 {new Date(res.reservationTime).toLocaleString('vi-VN')}</span>
-                  <span>👥 {res.guestCount} khách</span>
-                  <span>🎫 {res.reservationCode}</span>
-                  {res.note && <span>📝 {res.note}</span>}
+                  <span><Calendar size={13} /> {new Date(res.reservationTime).toLocaleString('vi-VN')}</span>
+                  <span><Users size={13} /> {res.guestCount} khách</span>
+                  <span><Ticket size={13} /> {res.reservationCode}</span>
+                  {res.note && <span><StickyNote size={13} /> {res.note}</span>}
                 </div>
 
                 {/* Actions */}
@@ -164,7 +167,7 @@ export function ReservationsPage() {
                           ))}
                         </select>
                         <button className="btn btn-primary btn-confirm-assign" onClick={() => handleConfirm(res.id)}>
-                          ✅ Xác Nhận
+                          <Check size={14} /> Xác Nhận
                         </button>
                         <button className="btn btn-secondary" onClick={() => { setAssigningId(null); setSelectedTableId(''); }}>
                           Hủy
@@ -186,7 +189,7 @@ export function ReservationsPage() {
                 {res.status === 'Confirmed' && (
                   <div className="res-action-row">
                     <button className="btn btn-success" onClick={() => handleCheckIn(res.id)}>
-                      ✅ Check-In Khách
+                      <Check size={14} /> Check-In Khách
                     </button>
                     <button className="btn btn-tertiary text-danger" onClick={() => handleCancel(res.id)}>
                       Hủy

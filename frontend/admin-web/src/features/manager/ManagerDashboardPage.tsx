@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Clock, DollarSign, Eye, Send, ShoppingBag, TrendingUp, Users } from 'lucide-react';
+import { Clock, DollarSign, Eye, RefreshCw, Send, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 import { kitchenService } from '../../services/kitchenService';
 import { tableService } from '../../services/tableService';
 import type { KitchenOrderItem, Table } from '../../types';
@@ -200,7 +200,7 @@ export function ManagerDashboardPage() {
             </table>
           </div>
           <button className="btn btn-tertiary" style={{ marginTop: 8 }} onClick={loadData}>
-            🔄 Làm Mới
+            <RefreshCw size={14} /> Làm Mới
           </button>
         </div>
       )}

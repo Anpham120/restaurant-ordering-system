@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Phone, Clock, Check, ArrowRight } from 'lucide-react';
 import { reservationService } from '../../services/reservationService';
 import { tableService } from '../../services/tableService';
 import type { Area, Reservation, Table, TableStatus } from '../../types';
@@ -167,11 +168,11 @@ export function TableMapPage() {
             {matchingRes && (
               <div className="matching-res-preview">
                 <p><strong>Đặt chỗ:</strong> {matchingRes.customerName}</p>
-                <p>📞 {matchingRes.phone} — {matchingRes.guestCount} khách</p>
-                <p>🕐 {new Date(matchingRes.reservationTime).toLocaleString('vi-VN')}</p>
+                <p><Phone size={13} /> {matchingRes.phone} — {matchingRes.guestCount} khách</p>
+                <p><Clock size={13} /> {new Date(matchingRes.reservationTime).toLocaleString('vi-VN')}</p>
                 {matchingRes.status === 'Confirmed' && (
                   <button className="btn btn-primary" onClick={handleCheckIn}>
-                    ✅ Check-In Khách
+                    <Check size={14} /> Check-In Khách
                   </button>
                 )}
               </div>
@@ -207,7 +208,7 @@ export function TableMapPage() {
             <div className="action-vertical-box">
               {selectedTable.status === 'Cleaning' && (
                 <button className="btn btn-success" onClick={() => handleChangeTableStatus('Available')}>
-                  ✓ Dọn Xong → Available
+                  <Check size={14} /> Dọn Xong <ArrowRight size={12} /> Available
                 </button>
               )}
               {selectedTable.status === 'Available' && (
@@ -217,7 +218,7 @@ export function TableMapPage() {
               )}
               {selectedTable.status === 'Inactive' && (
                 <button className="btn btn-success" onClick={() => handleChangeTableStatus('Available')}>
-                  Hết Bảo Trì → Available
+                  Hết Bảo Trì <ArrowRight size={12} /> Available
                 </button>
               )}
             </div>

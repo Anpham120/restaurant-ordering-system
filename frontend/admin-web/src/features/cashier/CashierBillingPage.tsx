@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { RefreshCw, Check, Banknote, Landmark } from 'lucide-react';
 import { billingService } from '../../services/billingService';
 import { tableService } from '../../services/tableService';
 import type { InvoicePreview, PaymentMethod, Table } from '../../types';
@@ -91,7 +92,7 @@ export function CashierBillingPage() {
           )}
         </div>
         <button className="btn btn-tertiary" style={{ margin: '8px' }} onClick={loadTables}>
-          🔄 Làm Mới
+          <RefreshCw size={14} /> Làm Mới
         </button>
       </div>
 
@@ -105,7 +106,7 @@ export function CashierBillingPage() {
         ) : paidInvoice ? (
           <div className="invoice-box-card">
             <div className="success-toast-message">
-              ✅ Thanh toán thành công! Hóa đơn: {paidInvoice.invoiceCode}
+              <Check size={16} /> Thanh toán thành công! Hóa đơn: {paidInvoice.invoiceCode}
             </div>
             <p>Tổng: <strong>{paidInvoice.totalAmount.toLocaleString('vi-VN')}đ</strong></p>
             <p>Phương thức: {paidInvoice.paymentMethod}</p>
@@ -169,7 +170,7 @@ export function CashierBillingPage() {
                         className={`payment-method-btn ${paymentMethod === m ? 'active' : ''}`}
                         onClick={() => setPaymentMethod(m)}
                       >
-                        {m === 'Cash' ? '💵 Tiền Mặt' : '🏦 Chuyển Khoản'}
+                        {m === 'Cash' ? <><Banknote size={14} /> Tiền Mặt</> : <><Landmark size={14} /> Chuyển Khoản</>}
                       </button>
                     ))}
                   </div>
@@ -179,7 +180,7 @@ export function CashierBillingPage() {
 
                 <div className="invoice-actions-footer">
                   <button className="btn btn-primary w-full" onClick={handlePay} disabled={loading}>
-                    {loading ? 'Đang xử lý...' : '✅ Xác Nhận Thanh Toán'}
+                    {loading ? 'Đang xử lý...' : <><Check size={16} /> Xác Nhận Thanh Toán</>}
                   </button>
                   <button className="btn btn-tertiary" onClick={handleReset} style={{ marginTop: 8 }}>
                     Hủy

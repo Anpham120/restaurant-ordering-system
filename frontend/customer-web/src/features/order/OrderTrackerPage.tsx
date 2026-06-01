@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useOrderTracking } from '../../hooks/useOrderTracking';
 import type { Order } from '../../types/orderTracking';
@@ -22,10 +23,9 @@ export function OrderTrackerPage({ sessionToken, tableNumber, triggerToast, isRe
   const { placedOrders, realtimeStatus, realtimeMessage, lastRealtimeAt, addPlacedOrder } =
     useOrderTracking(sessionToken, tableNumber, triggerToast, isRealSession);
 
-  // Expose addPlacedOrder to parent (for cart submission)
-  // Use a ref to avoid re-render loops
-  const addOrderRef = { current: addPlacedOrder };
-  onTrackingReady(addOrderRef.current);
+  useEffect(() => {
+    onTrackingReady(addPlacedOrder);
+  }, [addPlacedOrder, onTrackingReady]);
 
   const statusColor: Record<string, string> = {
     demo: 'pill-pending', connecting: 'pill-pending',

@@ -77,7 +77,9 @@ export function useTableSession(
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('sessionToken');
-    if (token) loadSession(token);
+    if (token) {
+      void Promise.resolve().then(() => loadSession(token));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Utensils } from 'lucide-react';
 import { menuService } from '../../services/menuService';
 import type { MenuItem } from '../../types/menu';
@@ -13,14 +13,17 @@ interface Props {
 export function HomePage({ onNavigate, onAddToCart, triggerToast }: Props) {
   const [featured, setFeatured] = useState<MenuItem[]>([]);
 
-  const load = useCallback(async () => {
-    const res = await menuService.getMenuItems();
-    if (res.success && Array.isArray(res.data)) {
-      setFeatured((res.data as MenuItem[]).slice(0, 6));
-    }
-  }, []);
+  useEffect(() => {
+    let cancelled = false;
 
-  useEffect(() => { load(); }, [load]);
+    void menuService.getMenuItems().then(res => {
+      if (!cancelled && res.success && Array.isArray(res.data)) {
+        setFeatured((res.data as MenuItem[]).slice(0, 6));
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="home-page">

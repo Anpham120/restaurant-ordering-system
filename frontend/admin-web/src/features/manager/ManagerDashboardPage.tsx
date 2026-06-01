@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Clock, DollarSign, Eye, RefreshCw, Send, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 import { kitchenService } from '../../services/kitchenService';
 import { tableService } from '../../services/tableService';
+import { aiService } from '../../services/aiService';
 import type { KitchenOrderItem, Table } from '../../types';
 
 type Tab = 'metrics' | 'orders' | 'report';
@@ -21,31 +22,12 @@ const TOP_SELLERS = [
   { name: '4. Bánh Mì Chảo Đặc Biệt', desc: 'Món Ăn / Pate trứng nóng sốt', count: '9 Suất' },
 ];
 
-const AI_REPORT_TEXT = `### BÁO CÁO VẬN HÀNH HÀNG NGÀY - TV FOOD (AI RAG ASSISTANT)
----
-* **Dữ liệu phân tích**: Hệ thống Monolith & RAG Knowledge Base
-
-#### 1. Phân Tích Doanh Thu & Đơn Hàng
-* **Tổng doanh thu hôm nay**: **1,850,000 VND** (Đạt 115% so với mục tiêu ngày).
-* **Số đơn hàng đã hoàn thành**: **42 đơn** (Tăng 12% so với hôm qua).
-* **Giá trị trung bình mỗi đơn**: **44,047 VND** / đơn.
-
-#### 2. Sản Phẩm Bán Chạy & Khung Giờ Cao Điểm
-* **Món bán chạy nhất**: **Trà Đào Sả TV FOOD** (18 cốc) & **Phở Bò Tày Đặc Biệt** (14 tô).
-* **Khung giờ cao điểm**: Từ **11:30 - 13:30** (Chiếm 62% tổng lượng khách) và **18:00 - 20:00**.
-
-#### 3. Cảnh Báo Vận Hành & Kiến Nghị
-* **Thời gian chờ chế biến tại Bếp**: Trung bình 18 phút/món. Khuyến nghị tăng thêm nhân sự bếp 11:00 - 14:00.
-* **Tỷ lệ thanh toán Bank Transfer**: Đạt **74%**, giảm thiểu chi phí tiền mặt thủ công.
-* **Gợi ý khuyến mại**: Đẩy mạnh bán kèm bánh ngọt khung giờ 14:30 - 16:30.`;
-
 export function ManagerDashboardPage() {
   const [activeTab, setActiveTab] = useState<Tab>('metrics');
   const [occupiedTables, setOccupiedTables] = useState<Table[]>([]);
   const [orderItems, setOrderItems] = useState<KitchenOrderItem[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReportOutput, setAiReportOutput] = useState('');
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = useCallback(async () => {
     const [tablesRes, ordersRes] = await Promise.all([
@@ -57,26 +39,23 @@ export function ManagerDashboardPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    void Promise.resolve().then(loadData);
   }, [loadData]);
 
   const pendingCount = orderItems.filter(i => i.status === 'Pending' || i.status === 'Preparing').length;
 
-  const generateAiReport = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+  const generateAiReport = async () => {
     setIsGeneratingReport(true);
     setAiReportOutput('');
-    let i = 0;
-    intervalRef.current = setInterval(() => {
-      setAiReportOutput(prev => prev + AI_REPORT_TEXT.charAt(i));
-      i++;
-      if (i >= AI_REPORT_TEXT.length) {
-        clearInterval(intervalRef.current!);
-        intervalRef.current = null;
-        setIsGeneratingReport(false);
-      }
-    }, 10);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await aiService.managerReport(today);
+    if (res.success && res.data) {
+      setAiReportOutput(res.data.summary);
+    } else {
+      setAiReportOutput(res.error?.message ?? 'AI Service đang tạm thời không khả dụng.');
+    }
+    setIsGeneratingReport(false);
   };
 
   return (
@@ -211,19 +190,13 @@ export function ManagerDashboardPage() {
             <div className="ai-prompt-box">
               <h3>Trợ Lý Báo Cáo Thông Minh TV FOOD AI</h3>
               <p>Trợ lý ảo RAG tự động thu thập doanh số thực tế, phân tích khung giờ cao điểm và đánh giá hiệu năng bếp chế biến để sinh báo cáo hành động thông minh.</p>
-              <div className="mock-prompt-container">
-                <strong>Yêu cầu gửi AI Service:</strong>
+              <div className="ai-request-container">
+                <strong>Request gọi AI Service:</strong>
                 <pre className="prompt-pre">
 {`{
-  "system": "FastAPI AI RAG service",
-  "knowledge_base": "tv_food_operations_guide",
-  "today_metrics": {
-    "revenue": 1850000,
-    "completed_orders": 42,
-    "peak_hour": "12:00 & 19:00",
-    "top_item": "Trà Đào Sả TV FOOD",
-    "avg_prep_time_minutes": 18
-  }
+  "endpoint": "POST /api/v1/ai/manager-report",
+  "date": "${new Date().toISOString().slice(0, 10)}",
+  "pipeline": "semantic RAG context + real LLM provider"
 }`}
                 </pre>
               </div>

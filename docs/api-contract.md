@@ -1030,6 +1030,121 @@ Response:
 
 Health check AI không được làm sập core flow backend. Nếu AI Service lỗi, backend phải trả lỗi có kiểm soát cho endpoint AI và vẫn cho phép đặt bàn, gọi món, bếp và thanh toán.
 
+### POST /api/v1/ai/menu-chat
+
+Trợ lý khách hàng hỏi đáp menu/chính sách. Service truy xuất context từ `knowledge_base/` bằng semantic vector search, sau đó gọi LLM provider thật để sinh câu trả lời.
+
+Request:
+
+```json
+{
+  "question": "Có món nào phù hợp cho người ăn chay không?",
+  "sessionId": "optional-session-id"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "answer": "Nội dung do LLM provider sinh...",
+    "sources": ["menu.md", "faq.md"],
+    "provider": "9router",
+    "model": "9router"
+  }
+}
+```
+
+### POST /api/v1/ai/recommend-combo
+
+Gợi ý combo bằng LLM provider dựa trên số khách, ngân sách, sở thích và RAG semantic context.
+
+Request:
+
+```json
+{
+  "numberOfPeople": 4,
+  "budget": 500000,
+  "preferences": ["hải sản", "không cay"]
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "answer": "Combo đề xuất do LLM provider sinh...",
+    "sources": ["menu.md"],
+    "numberOfPeople": 4,
+    "budget": 500000,
+    "provider": "9router",
+    "model": "9router"
+  }
+}
+```
+
+### POST /api/v1/ai/manager-report
+
+Sinh báo cáo quản lý bằng LLM provider dựa trên RAG context vận hành.
+
+Request:
+
+```json
+{
+  "date": "2026-06-01"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "date": "2026-06-01",
+    "summary": "Báo cáo do LLM provider sinh...",
+    "sources": ["policy.md"],
+    "provider": "9router",
+    "model": "9router"
+  }
+}
+```
+
+### POST /api/v1/ai/rebuild-index
+
+Rebuild semantic FAISS index từ `knowledge_base/*.md`.
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "indexedDocuments": 3,
+    "sources": ["faq.md", "menu.md", "policy.md"],
+    "indexPath": "knowledge_base/.index/knowledge.faiss",
+    "model": "sentence-transformers/all-MiniLM-L6-v2"
+  }
+}
+```
+
+Nếu thiếu API key hoặc provider lỗi:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "AI_SERVICE_UNAVAILABLE",
+    "message": "AI provider API key is not configured."
+  }
+}
+```
+
 ---
 
 ## 19. Checklist kiểm thử API contract

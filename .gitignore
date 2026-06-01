@@ -33,6 +33,10 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+services/ai-service/knowledge_base/.index/
+
+# Runtime logs
+*.log
 
 # OS files
 .DS_Store

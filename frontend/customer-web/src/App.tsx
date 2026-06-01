@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Utensils, UtensilsCrossed, Calendar, ShoppingBag, Search, Plus, Minus, X, Clock,
   RefreshCw, Sparkles, Sun, Moon, Home, Bot, Heart, Star,
@@ -10,6 +10,7 @@ import { ReservationPage } from './features/reservation/ReservationPage';
 import { OrderTrackerPage } from './features/order/OrderTrackerPage';
 import type { CartItem } from './types/menu';
 import type { Order } from './types/orderTracking';
+import { aiService } from './services/aiService';
 import { orderService } from './services/orderService';
 import { useTableSession } from './hooks/useTableSession';
 import './App.css';
@@ -21,6 +22,13 @@ const MENU_LOOKUP: Record<string, { name: string; price: number }> = {
   'dish-003': { name: 'Gà Chiên Nước Mắm Tỏi Ớt', price: 189000 },
   'dish-007': { name: 'Soda Chanh Dây Bạc Hà', price: 79000 },
 };
+
+const ACTIVE_TABS = ['home', 'menu', 'reservation', 'tracker', 'ai'] as const;
+type ActiveTab = typeof ACTIVE_TABS[number];
+
+function isActiveTab(value: string): value is ActiveTab {
+  return ACTIVE_TABS.includes(value as ActiveTab);
+}
 
 interface ChatMessage {
   id: string;
@@ -42,15 +50,16 @@ export function App() {
   }, [theme]);
 
   // Tab navigation
-  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'reservation' | 'tracker' | 'ai'>(() =>
-    (sessionStorage.getItem('activeTab') as any) || 'home'
-  );
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const savedTab = sessionStorage.getItem('activeTab');
+    return savedTab && isActiveTab(savedTab) ? savedTab : 'home';
+  });
 
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['home', 'menu', 'reservation', 'tracker', 'ai'].includes(hash)) {
-        setActiveTab(hash as any);
+      if (isActiveTab(hash)) {
+        setActiveTab(hash);
       }
     };
     handleHashChange();
@@ -127,6 +136,13 @@ export function App() {
   // Tracker ref — expose addPlacedOrder from OrderTrackerPage to handleSubmitOrder
   const addOrderToTrackerRef = useRef<((order: Order) => void) | null>(null);
   const pendingOrderRef = useRef<Order | null>(null);
+  const handleTrackingReady = useCallback((addOrder: (order: Order) => void) => {
+    addOrderToTrackerRef.current = addOrder;
+    if (pendingOrderRef.current) {
+      addOrder(pendingOrderRef.current);
+      pendingOrderRef.current = null;
+    }
+  }, []);
 
   const handleSubmitOrder = async () => {
     if (cart.length === 0) return;
@@ -216,7 +232,7 @@ export function App() {
   const [aiInputValue, setAiInputValue] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
 
-  const handleSendAiMessage = (forcedQuery?: string) => {
+  const handleSendAiMessage = async (forcedQuery?: string) => {
     const query = forcedQuery || aiInputValue;
     if (!query.trim()) return;
 
@@ -224,38 +240,45 @@ export function App() {
     if (!forcedQuery) setAiInputValue('');
     setIsAiTyping(true);
 
-    setTimeout(() => {
-      const lowerQuery = query.toLowerCase();
-      let text = '';
-      let sources: string[] = ['menu.md'];
-      let suggestedAction: ChatMessage['suggestedAction'];
+    const comboParams = inferComboParams(query);
+    const res = comboParams
+      ? await aiService.recommendCombo(comboParams)
+      : await aiService.menuChat(query, sessionToken);
 
-      if (lowerQuery.includes('4 người') || lowerQuery.includes('600k') || lowerQuery.includes('combo')) {
-        text = 'Dựa trên thực đơn và yêu cầu về ngân sách khoảng 600.000đ dành cho nhóm 4 người, tôi đã phối hợp một **Combo Đặc Sản Ấm Cúng** hoàn hảo:\n\n1. **Lẩu Thái Hải Sản Tinh Hoa** (239k)\n2. **Gà Chiên Nước Mắm Tỏi Ớt** (189k)\n3. **Cá Hồi Sốt Chanh Dây** (159k)\n4. **Soda Chanh Dây Bạc Hà** x3 ly (237k)\n\n**Tổng cộng ~824.000đ** cho bữa tiệc 4 người no nê!';
-        sources = ['menu.md', 'faq.md'];
-        suggestedAction = {
-          label: 'Thêm Combo 4 Người Đề Xuất Vào Giỏ Hàng',
-          items: [
-            { id: 'dish-001', quantity: 1, note: 'Ít cay' },
-            { id: 'dish-003', quantity: 1, note: '' },
-            { id: 'dish-002', quantity: 1, note: '' },
-            { id: 'dish-007', quantity: 3, note: '' },
-          ],
-        };
-      } else if (lowerQuery.includes('cay') || lowerQuery.includes('trẻ em')) {
-        text = 'Các món không cay, phù hợp trẻ em:\n\n1. **Bò Lúc Lắc Khoai Tây Giòn** — thịt mềm, không cay\n2. **Cơm Chiên Hải Sản Hạt Sen** — dễ ăn, bổ dưỡng\n3. **Kem Bơ Sầu Riêng Đắk Lắk** — tráng miệng ngọt ngào';
-        sources = ['menu.md', 'ingredient_notes.md'];
-      } else if (lowerQuery.includes('chay') || lowerQuery.includes('vegetarian')) {
-        text = 'Đối với chế độ ăn chay, quý khách có thể ghi chú **"Làm chay"** khi đặt món. Đầu bếp sẽ thay thế nguyên liệu phù hợp.\n\nMón hoàn toàn chay: Kem Bơ Sầu Riêng, Nước Cam Vắt, Soda Chanh Dây.';
-        sources = ['menu.md', 'restaurant_policy.md'];
-      } else {
-        text = 'Tôi đã ghi nhận câu hỏi của quý khách. Lẩu Thái Hải Sản và Bò Lúc Lắc là hai món bán chạy nhất tuần này. Quý khách có muốn tôi tư vấn thêm về khẩu phần hoặc combo không ạ?';
-        sources = ['menu.md', 'faq.md'];
-      }
+    if (res.success && res.data) {
+      setChatMessages(prev => [...prev, {
+        id: `ast-${Date.now()}`,
+        sender: 'assistant',
+        text: res.data.answer,
+        sources: res.data.sources,
+        suggestedAction: res.data.suggestedAction,
+      }]);
+    } else {
+      setChatMessages(prev => [...prev, {
+        id: `ast-${Date.now()}`,
+        sender: 'assistant',
+        text: res.error?.message ?? 'AI Service đang tạm thời không khả dụng.',
+      }]);
+    }
 
-      setChatMessages(prev => [...prev, { id: `ast-${Date.now()}`, sender: 'assistant', text, sources, suggestedAction }]);
-      setIsAiTyping(false);
-    }, 1000);
+    setIsAiTyping(false);
+  };
+
+  const inferComboParams = (query: string) => {
+    const normalized = query.toLowerCase();
+    if (!normalized.includes('combo') && !normalized.includes('người') && !normalized.includes('ngan sach') && !normalized.includes('ngân sách')) {
+      return null;
+    }
+
+    const peopleMatch = normalized.match(/(\d+)\s*(người|khach|khách)/);
+    const budgetMatch = normalized.match(/(\d+)\s*(k|nghìn|ngan|ngàn|000)/);
+    const rawBudget = budgetMatch ? Number(budgetMatch[1]) : 500;
+
+    return {
+      numberOfPeople: peopleMatch ? Number(peopleMatch[1]) : 4,
+      budget: rawBudget < 10000 ? rawBudget * 1000 : rawBudget,
+      preferences: [query],
+    };
   };
 
   const handleApplySuggestedItems = (action: ChatMessage['suggestedAction']) => {
@@ -450,13 +473,7 @@ export function App() {
               tableNumber={tableSession?.tableNumber || ''}
               triggerToast={triggerToast}
               isRealSession={isRealSession}
-              onTrackingReady={(addOrder) => {
-                addOrderToTrackerRef.current = addOrder;
-                if (pendingOrderRef.current) {
-                  addOrder(pendingOrderRef.current);
-                  pendingOrderRef.current = null;
-                }
-              }}
+              onTrackingReady={handleTrackingReady}
             />
           )}
 

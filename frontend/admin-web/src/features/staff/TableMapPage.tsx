@@ -39,7 +39,9 @@ export function TableMapPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    void Promise.resolve().then(loadData);
+  }, [loadData]);
 
   const filteredTables = selectedAreaId === 'all'
     ? tables

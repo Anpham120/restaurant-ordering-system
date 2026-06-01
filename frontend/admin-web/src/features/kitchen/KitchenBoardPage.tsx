@@ -31,7 +31,9 @@ export function KitchenBoardPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void Promise.resolve().then(load);
+  }, [load]);
 
   // SignalR / WS: nhận NewOrderCreated -> reload
   useEffect(() => {
@@ -50,7 +52,7 @@ export function KitchenBoardPage() {
     } catch { /* ignore if hub not available */ }
 
     return () => { wsRef.current?.close(); };
-  }, [load, env.hubUrl]);
+  }, [load]);
 
   const handleAdvance = async (item: KitchenOrderItem) => {
     const next = NEXT_STATUS[item.status];

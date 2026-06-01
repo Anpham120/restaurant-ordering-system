@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { menuService } from '../../services/menuService';
 import type { MenuCategory, MenuItem, CartItem } from '../../types/menu';
@@ -17,18 +17,23 @@ export function MenuPage({ cart, onAddToCart, onUpdateQty, triggerToast }: Props
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    const [catsRes, itemsRes] = await Promise.all([
+  useEffect(() => {
+    let cancelled = false;
+
+    void Promise.all([
       menuService.getCategories(),
       menuService.getMenuItems(),
-    ]);
-    if (catsRes.success && Array.isArray(catsRes.data)) setCategories(catsRes.data as MenuCategory[]);
-    if (itemsRes.success && Array.isArray(itemsRes.data)) setItems(itemsRes.data as MenuItem[]);
-    setLoading(false);
-  }, []);
+    ]).then(([catsRes, itemsRes]) => {
+      if (cancelled) return;
+      if (catsRes.success && Array.isArray(catsRes.data)) setCategories(catsRes.data as MenuCategory[]);
+      if (itemsRes.success && Array.isArray(itemsRes.data)) setItems(itemsRes.data as MenuItem[]);
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = items.filter(item => {
     const matchCat = selectedCategory === 'all' || item.categoryId === selectedCategory;

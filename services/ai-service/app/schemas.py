@@ -2,9 +2,15 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 
+class ApiError(BaseModel):
+    code: str
+    message: str
+
+
 class ApiResponse(BaseModel):
     success: bool = True
-    data: dict
+    data: dict | None = None
+    error: ApiError | None = None
 
 
 class MenuChatRequest(BaseModel):

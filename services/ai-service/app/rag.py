@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
+from app.vector_store import VectorStore, VectorStoreUnavailable
+
 
 FALLBACK_ANSWER = "Hiện tại hệ thống chưa có đủ dữ liệu để kết luận."
 
@@ -10,59 +12,47 @@ FALLBACK_ANSWER = "Hiện tại hệ thống chưa có đủ dữ liệu để k
 class SearchResult:
     answer: str
     sources: list[str]
+    snippets: list[str]
+
+    @property
+    def context(self) -> str:
+        return "\n\n".join(
+            f"[{source}]\n{snippet}"
+            for source, snippet in zip(self.sources, self.snippets, strict=False)
+        )
 
 
 class KnowledgeBase:
     def __init__(self, root: Path) -> None:
         self.root = root
+        self.vector_store = VectorStore(root)
 
     def search(self, query: str, limit: int = 3) -> SearchResult:
-        documents = self._documents()
-        if not documents:
-            return SearchResult(FALLBACK_ANSWER, [])
+        try:
+            hits = self.vector_store.search(query, top_k=limit)
+        except VectorStoreUnavailable:
+            hits = []
 
-        query_terms = _terms(query)
-        if not query_terms:
-            return SearchResult(FALLBACK_ANSWER, [])
+        if not hits:
+            return SearchResult(FALLBACK_ANSWER, [], [])
 
-        ranked: list[tuple[int, str, str]] = []
-        for source, content in documents:
-            content_terms = set(_terms(content))
-            score = sum(1 for term in query_terms if term in content_terms)
-            if score > 0:
-                ranked.append((score, source, content))
-
-        if not ranked:
-            return SearchResult(FALLBACK_ANSWER, [])
-
-        ranked.sort(key=lambda item: item[0], reverse=True)
-        selected = ranked[:limit]
-        snippets = [_snippet(content) for _, _, content in selected]
-        sources = [source for _, source, _ in selected]
+        snippets = [_snippet(hit.content) for hit in hits]
+        sources = [hit.source for hit in hits]
         answer = " ".join(snippets).strip() or FALLBACK_ANSWER
-        return SearchResult(answer, sources)
+        return SearchResult(answer, sources, snippets)
 
     def rebuild_index(self) -> dict:
-        documents = self._documents()
-        return {
-            "indexedDocuments": len(documents),
-            "sources": [source for source, _ in documents],
-        }
-
-    def _documents(self) -> list[tuple[str, str]]:
-        if not self.root.exists():
-            return []
-
-        documents: list[tuple[str, str]] = []
-        for path in sorted(self.root.rglob("*.md")):
-            content = path.read_text(encoding="utf-8").strip()
-            if content:
-                documents.append((path.name, content))
-        return documents
-
-
-def _terms(value: str) -> list[str]:
-    return re.findall(r"[\wÀ-ỹ]+", value.lower())
+        try:
+            return self.vector_store.build_index()
+        except VectorStoreUnavailable as exc:
+            return {
+                "indexedDocuments": 0,
+                "sources": [],
+                "indexPath": str(self.vector_store.index_path),
+                "model": self.vector_store.model_name,
+                "status": "unavailable",
+                "message": str(exc),
+            }
 
 
 def _snippet(content: str, max_length: int = 500) -> str:

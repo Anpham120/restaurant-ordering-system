@@ -1623,7 +1623,7 @@ body.dark-theme .kanban-empty-state {
   margin-bottom: 18px;
 }
 
-.mock-prompt-container {
+.ai-request-container {
   background-color: var(--bg-deep);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -1631,7 +1631,7 @@ body.dark-theme .kanban-empty-state {
   margin-bottom: 18px;
 }
 
-.mock-prompt-container strong {
+.ai-request-container strong {
   display: block;
   font-size: 0.8rem;
   font-weight: 700;

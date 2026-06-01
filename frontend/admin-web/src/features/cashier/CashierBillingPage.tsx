@@ -21,7 +21,9 @@ export function CashierBillingPage() {
     if (res.success) setTables(res.data);
   }, []);
 
-  useEffect(() => { loadTables(); }, [loadTables]);
+  useEffect(() => {
+    void Promise.resolve().then(loadTables);
+  }, [loadTables]);
 
   const handleLookupSession = async () => {
     setError(null);

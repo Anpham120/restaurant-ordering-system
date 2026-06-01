@@ -1,27 +1,17 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { tokenStorage } from '../lib/apiClient';
 import { authService } from '../services/authService';
-import type { AuthUser, UserRole } from '../types';
-
-interface AuthState {
-  user: AuthUser | null;
-  token: string | null;
-  isLoading: boolean;
-}
-
-interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<string | null>;
-  logout: () => void;
-  hasRole: (...roles: UserRole[]) => boolean;
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
+import type { UserRole } from '../types';
+import { AuthContext, type AuthState } from './authContextValue';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    token: tokenStorage.get(),
-    isLoading: true,
+  const [state, setState] = useState<AuthState>(() => {
+    const token = tokenStorage.get();
+    return {
+      user: null,
+      token,
+      isLoading: Boolean(token),
+    };
   });
 
   const logout = useCallback(() => {
@@ -33,7 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const token = tokenStorage.get();
     if (!token) {
-      setState(s => ({ ...s, isLoading: false }));
       return;
     }
     authService.me().then(res => {

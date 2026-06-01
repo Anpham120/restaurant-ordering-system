@@ -35,7 +35,9 @@ export function ReservationsPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void Promise.resolve().then(load);
+  }, [load]);
 
   const filtered = reservations.filter(r => {
     const matchKw = r.customerName.toLowerCase().includes(keyword.toLowerCase()) ||

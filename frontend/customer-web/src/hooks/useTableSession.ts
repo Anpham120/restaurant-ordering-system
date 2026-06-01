@@ -25,7 +25,7 @@ export function useTableSession(
     const saved = sessionStorage.getItem('tableSession');
     return saved ? JSON.parse(saved) : null;
   });
-  // True only when the session was verified against the backend → enables real order creation.
+  // True only when the session was verified against the backend -> enables real order creation.
   const [isRealSession, setIsRealSession] = useState(() => sessionStorage.getItem('isRealSession') === 'true');
 
   const loadSession = async (token: string) => {
@@ -46,7 +46,7 @@ export function useTableSession(
     if (res.success && res.data) {
       const s = res.data;
       applySession({ id: s.id, tableId: s.tableId, tableNumber: s.tableNumber, status: s.status, openedAt: s.openedAt }, true);
-      triggerToast(`📍 Đã kích hoạt session gọi món tại Bàn ${s.tableNumber}!`);
+      triggerToast(`Đã kích hoạt session gọi món tại Bàn ${s.tableNumber}!`);
     } else {
       applySession({
         id: 'sess_' + Math.random().toString(36).substr(2, 9),
@@ -55,7 +55,7 @@ export function useTableSession(
         status: 'Active',
         openedAt: new Date().toISOString(),
       }, false);
-      triggerToast('📍 Đã kích hoạt session gọi món tại Bàn A01 (demo)!');
+      triggerToast('Đã kích hoạt session gọi món tại Bàn A01 (demo)!');
     }
   };
 

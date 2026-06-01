@@ -25,16 +25,16 @@ const AI_REPORT_TEXT = `### BÁO CÁO VẬN HÀNH HÀNG NGÀY - TV FOOD (AI RAG 
 ---
 * **Dữ liệu phân tích**: Hệ thống Monolith & RAG Knowledge Base
 
-#### 📈 1. Phân Tích Doanh Thu & Đơn Hàng
+#### 1. Phân Tích Doanh Thu & Đơn Hàng
 * **Tổng doanh thu hôm nay**: **1,850,000 VND** (Đạt 115% so với mục tiêu ngày).
 * **Số đơn hàng đã hoàn thành**: **42 đơn** (Tăng 12% so với hôm qua).
 * **Giá trị trung bình mỗi đơn**: **44,047 VND** / đơn.
 
-#### ☕ 2. Sản Phẩm Bán Chạy & Khung Giờ Cao Điểm
+#### 2. Sản Phẩm Bán Chạy & Khung Giờ Cao Điểm
 * **Món bán chạy nhất**: **Trà Đào Sả TV FOOD** (18 cốc) & **Phở Bò Tày Đặc Biệt** (14 tô).
 * **Khung giờ cao điểm**: Từ **11:30 - 13:30** (Chiếm 62% tổng lượng khách) và **18:00 - 20:00**.
 
-#### ⚠️ 3. Cảnh Báo Vận Hành & Kiến Nghị
+#### 3. Cảnh Báo Vận Hành & Kiến Nghị
 * **Thời gian chờ chế biến tại Bếp**: Trung bình 18 phút/món. Khuyến nghị tăng thêm nhân sự bếp 11:00 - 14:00.
 * **Tỷ lệ thanh toán Bank Transfer**: Đạt **74%**, giảm thiểu chi phí tiền mặt thủ công.
 * **Gợi ý khuyến mại**: Đẩy mạnh bán kèm bánh ngọt khung giờ 14:30 - 16:30.`;

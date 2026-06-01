@@ -231,7 +231,7 @@ export function App() {
       let suggestedAction: ChatMessage['suggestedAction'];
 
       if (lowerQuery.includes('4 người') || lowerQuery.includes('600k') || lowerQuery.includes('combo')) {
-        text = 'Dựa trên thực đơn và yêu cầu về ngân sách khoảng 600.000đ dành cho nhóm 4 người, tôi đã phối hợp một **Combo Đặc Sản Ấm Cúng** hoàn hảo:\n\n1. 🍲 **Lẩu Thái Hải Sản Tinh Hoa** (239k)\n2. 🍗 **Gà Chiên Nước Mắm Tỏi Ớt** (189k)\n3. 🍣 **Cá Hồi Sốt Chanh Dây** (159k)\n4. 🍹 **Soda Chanh Dây Bạc Hà** x3 ly (237k)\n\n👉 **Tổng cộng ~824.000đ** cho bữa tiệc 4 người no nê!';
+        text = 'Dựa trên thực đơn và yêu cầu về ngân sách khoảng 600.000đ dành cho nhóm 4 người, tôi đã phối hợp một **Combo Đặc Sản Ấm Cúng** hoàn hảo:\n\n1. **Lẩu Thái Hải Sản Tinh Hoa** (239k)\n2. **Gà Chiên Nước Mắm Tỏi Ớt** (189k)\n3. **Cá Hồi Sốt Chanh Dây** (159k)\n4. **Soda Chanh Dây Bạc Hà** x3 ly (237k)\n\n**Tổng cộng ~824.000đ** cho bữa tiệc 4 người no nê!';
         sources = ['menu.md', 'faq.md'];
         suggestedAction = {
           label: 'Thêm Combo 4 Người Đề Xuất Vào Giỏ Hàng',
@@ -243,10 +243,10 @@ export function App() {
           ],
         };
       } else if (lowerQuery.includes('cay') || lowerQuery.includes('trẻ em')) {
-        text = 'Các món không cay, phù hợp trẻ em:\n\n1. 🥩 **Bò Lúc Lắc Khoai Tây Giòn** — thịt mềm, không cay\n2. 🍛 **Cơm Chiên Hải Sản Hạt Sen** — dễ ăn, bổ dưỡng\n3. 🥑 **Kem Bơ Sầu Riêng Đắk Lắk** — tráng miệng ngọt ngào';
+        text = 'Các món không cay, phù hợp trẻ em:\n\n1. **Bò Lúc Lắc Khoai Tây Giòn** — thịt mềm, không cay\n2. **Cơm Chiên Hải Sản Hạt Sen** — dễ ăn, bổ dưỡng\n3. **Kem Bơ Sầu Riêng Đắk Lắk** — tráng miệng ngọt ngào';
         sources = ['menu.md', 'ingredient_notes.md'];
       } else if (lowerQuery.includes('chay') || lowerQuery.includes('vegetarian')) {
-        text = 'Đối với chế độ ăn chay, quý khách có thể ghi chú **"Làm chay"** khi đặt món. Đầu bếp sẽ thay thế nguyên liệu phù hợp.\n\nMón hoàn toàn chay: 🥑 Kem Bơ Sầu Riêng, 🍊 Nước Cam Vắt, 🍹 Soda Chanh Dây.';
+        text = 'Đối với chế độ ăn chay, quý khách có thể ghi chú **"Làm chay"** khi đặt món. Đầu bếp sẽ thay thế nguyên liệu phù hợp.\n\nMón hoàn toàn chay: Kem Bơ Sầu Riêng, Nước Cam Vắt, Soda Chanh Dây.';
         sources = ['menu.md', 'restaurant_policy.md'];
       } else {
         text = 'Tôi đã ghi nhận câu hỏi của quý khách. Lẩu Thái Hải Sản và Bò Lúc Lắc là hai món bán chạy nhất tuần này. Quý khách có muốn tôi tư vấn thêm về khẩu phần hoặc combo không ạ?';

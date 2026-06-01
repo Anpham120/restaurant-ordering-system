@@ -33,7 +33,7 @@ export function KitchenBoardPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // SignalR / WS: nhận NewOrderCreated → reload
+  // SignalR / WS: nhận NewOrderCreated -> reload
   useEffect(() => {
     const wsUrl = env.hubUrl.replace('https://', 'wss://').replace('http://', 'ws://');
     try {
